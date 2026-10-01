@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Prumo</title>
 <meta name="theme-color" content="#EEF3F2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B1719" media="(prefers-color-scheme: dark)">
@@ -238,6 +238,36 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
 .sheet-in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
+/* ---------- V6.1: teclado ---------- */
+:root{--kb:0px;--vvh:100vh}
+.sheet{bottom:var(--kb)!important;max-height:calc(var(--vvh) - var(--kb) - 24px)!important;transition:bottom .18s ease-out}
+.sheet-in > .row:last-child{position:sticky;bottom:-18px;margin:0 -18px -18px;padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);box-shadow:0 -10px 14px -10px rgba(0,0,0,.35);z-index:2}
+body.kb-aberto .sheet-in > .row:last-child{padding-bottom:12px}
+#rolagem{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px) + var(--kb))}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left;line-height:1.2}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+label.f{min-width:0}
+.grab{cursor:grab;padding:6px 0;margin:-6px auto 0;background-clip:content-box;height:16px;box-sizing:border-box}
+input.kp{caret-color:transparent;cursor:pointer}
+input.kp.ativo{border-color:var(--action)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--action) 35%,transparent)}
+input.money.kp.ativo{box-shadow:none;border-bottom-width:3px}
+#teclado{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--bg);border-top:1px solid var(--line);padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none}
+@media (prefers-reduced-motion:no-preference){#teclado{animation:tecSobe .16s ease-out}@keyframes tecSobe{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}}
+#teclado .barra{display:flex;justify-content:space-between;align-items:center;padding:0 6px;min-height:36px}
+#teclado .barra span{font-size:.82rem;color:var(--muted)}
+#teclado .barra button{border:0;background:transparent;color:var(--action);font:inherit;font-weight:700;font-size:.92rem;min-height:36px;padding:0 6px;cursor:pointer}
+#teclado .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#teclado .grade button{min-height:52px;border:0;border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;touch-action:manipulation}
+#teclado .grade button.sec{background:var(--inset);border:1px solid var(--line);font-size:1.1rem}
+#teclado .grade button:active{background:var(--action);color:var(--action-ink)}
+#teclado .grade svg{width:26px;height:26px}
+@media (max-height:700px){#teclado .grade button{min-height:44px}}
+/* configuração inicial: o botão Continuar fica sempre acima do teclado */
+.onb #oNext{position:sticky;bottom:calc(var(--kb) + 12px);z-index:3;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+/* telas baixas com teclado aberto: veredito compacto, como no mockup da tela menor */
+@media (max-height:720px){body.kb-aberto .sheet .verdict.mini .vt,body.kb-aberto .sheet-in > p.small{display:none}body.kb-aberto .sheet .verdict.mini{padding:10px 14px}}
+.saldo-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer}
+.saldo-card .v{font-size:1.2rem;font-weight:600;font-variant-numeric:tabular-nums}
 /* ---------- V6 ---------- */
 .onb{display:flex;flex-direction:column;gap:18px;min-height:calc(100vh - 140px);padding-top:8px}
 .onb h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0}
@@ -674,7 +704,7 @@ function viewConfig() {
   const n = ONB.passo, prog = '<div class="prog">' + [1, 2, 3].map(i => '<i class="' + (i <= n ? 'on' : '') + '"></i>').join('') + '</div><div class="small muted">Configuração inicial · ' + n + ' de 3</div>';
   const voltar = n > 1 ? '<button class="link" id="oBack" style="align-self:flex-start;padding:4px 0;min-height:0">‹ Voltar</button>' : '';
   let corpo = '';
-  if (n === 1) corpo = '<div><h1>Quanto você recebe por mês?</h1><p class="lead" style="margin-top:10px">O valor líquido, que cai na conta. Se muda todo mês, use a média.</p></div>' +
+  if (n === 1) corpo = (USER && !USER.displayName ? '<label class="f">Como quer ser chamado (opcional)<input type="text" id="oNome" maxlength="30" value="' + esc(ONB.nome || '') + '" autocomplete="given-name"></label>' : '') + '<div><h1>Quanto você recebe por mês?</h1><p class="lead" style="margin-top:10px">O valor líquido, que cai na conta. Se muda todo mês, use a média.</p></div>' +
     '<input class="money" id="oV" inputmode="decimal" placeholder="R$ 0,00" value="' + esc(ONB.salario) + '" aria-label="Salário mensal">' +
     '<button class="link" id="oBk" style="align-self:flex-start;padding:4px 0">Já tenho um backup do Prumo</button><input type="file" id="oFile" accept="application/json,.json" hidden>';
   if (n === 2) {
@@ -707,6 +737,7 @@ function bindConfig(V) {
     pinta();
   }
   const inp = V.querySelector('#oV'); if (inp) { inp.oninput = () => { if (n === 1) ONB.salario = inp.value; else ONB.saldo = inp.value; }; }
+  const on = V.querySelector('#oNome'); if (on) on.oninput = () => { ONB.nome = on.value.trim(); };
   V.querySelector('#oNext').onclick = () => {
     if (n === 1) { const v = parseMoney(ONB.salario); if (!(v > 0)) { show('Digite o valor do salário.'); return; } ONB.passo = 2; render(); return; }
     if (n === 2) { const d = ONB.dia > 30 ? 30 : ONB.dia; if (!(d >= 1 && d <= 30)) { show('Escolha o dia do salário.'); return; } ONB.dia = Math.min(d, 28); ONB.passo = 3; render(); return; }
@@ -715,7 +746,7 @@ function bindConfig(V) {
     const dS = ONB.dia; const t0 = today();
     const c = t0.getDate() >= dS ? t0.getFullYear() + '-' + pad(t0.getMonth() + 1) : ymAdd(t0.getFullYear() + '-' + pad(t0.getMonth() + 1), -1);
     S = migrar({inicio: c, salario: parseMoney(ONB.salario), diaSalario: dS, semSalario: [c], saldoInicial: {[c]: saldo},
-      itens: [], gastos: [], entradas: [], pagos: {}, nome: (USER && USER.displayName) || '', cicloContas: 2,
+      itens: [], gastos: [], entradas: [], pagos: {}, nome: (USER && USER.displayName) || ONB.nome || '', cicloContas: 2,
       v6Desde: isoDate(t0), tutorialVisto: false, novato: true});
     CLOUD_EMPTY = false; save(); render(); topo();
   };
@@ -743,7 +774,7 @@ function sheet(html, onMount) {
   L.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeSheet());
   if (onMount) onMount(L.querySelector('.sheet'));
 }
-function closeSheet(doVoltar) { document.getElementById('layer').innerHTML = ''; if (histFolha && !doVoltar) { histFolha = false; voltarHist(); } }
+function closeSheet(doVoltar) { fecharTeclado(); document.getElementById('layer').innerHTML = ''; if (histFolha && !doVoltar) { histFolha = false; voltarHist(); } }
 
 /* ---------- dicas ---------- */
 function dicas(c) {
@@ -846,8 +877,8 @@ function viewHoje() {
 
   if (r.semSal && !(S.saldoInicial && c in S.saldoInicial)) {
     h += '<section class="box"><h2>Quanto ' + vc() + ' tem disponível hoje até o salário de ' + ddmm(prox) + '?</h2>' +
-      '<p class="small muted" style="margin:6px 0 10px">Some o que está na conta, já descontando as contas que ainda faltam pagar neste ciclo. Os compromissos dos próximos ciclos já estão cadastrados.</p>' +
-      '<input class="money" id="iniVal" inputmode="decimal" placeholder="R$ 0,00" aria-label="Saldo disponível"><button class="btn primary full" style="margin-top:14px" id="iniOk">Salvar saldo</button></section>';
+      '<p class="small muted" style="margin:6px 0 12px">Some o que está na conta, já descontando as contas que ainda faltam pagar neste ciclo.</p>' +
+      '<button class="btn primary full" data-saldo="' + c + '">Informar saldo</button></section>';
   } else {
     const neg = livre < 0;
     const base = Math.max(0.01, r.gastos + Math.max(livre, 0));
@@ -859,6 +890,7 @@ function viewHoje() {
       '<p class="cap">' + (neg ? 'Gasto no ciclo: ' + brl(r.gastos) : on + ' de 10 partes disponíveis. Gasto no ciclo: ' + brl(r.gastos)) + '</p></section>';
   }
 
+  if (S.saldoInicial && c in S.saldoInicial) h += '<button class="box saldo-card" type="button" data-saldo="' + c + '"><span style="flex:1;min-width:0"><span class="small muted" style="display:block">Saldo informado em ' + cLabel(c) + '</span><span class="v">' + brl(S.saldoInicial[c]) + '</span></span><span class="link" style="padding:0">Editar</span></button>';
   h += cardFechamento();
   h += cardPassos();
   const ds = S.novato && passosEstado().some(p => !p.ok) ? [] : dicas(c);
@@ -1130,7 +1162,7 @@ function sheetItem(id, c) {
   sheet('<h2>' + esc(it.nome) + '</h2><p class="small muted">' + esc(it.custo || '') + '</p>' +
     '<label class="f">Valor em ' + cLabel(c) + '<input type="text" id="iV" inputmode="decimal" value="' + (v != null ? String(v).replace('.', ',') : '') + '"></label>' +
     '<label class="f">Dia de vencimento (vazio se não souber)<input type="text" id="iD" inputmode="numeric" value="' + (it.dia || '') + '"></label>' +
-    (it.divida !== false ? '<label class="f">Juros ao mês, em % (vazio se não tiver)<input type="text" id="iJ" inputmode="decimal" value="' + (jurosDe(it) != null ? String(jurosDe(it)).replace('.', ',') : '') + '"></label>' : '') +
+    (it.divida !== false ? '<label class="f">Juros ao mês, em % (vazio se não tiver)<input type="text" id="iJ" inputmode="decimal" data-nativo="1" value="' + (jurosDe(it) != null ? String(jurosDe(it)).replace('.', ',') : '') + '"></label>' : '') +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="iOk" style="flex:1">Salvar</button><button class="btn danger" id="iDel">Excluir</button></div>',
     el => {
       el.querySelector('#iOk').onclick = () => {
@@ -1156,7 +1188,7 @@ function sheetNovoItem(tipoIni) {
     '<div class="chips" id="nT" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" class="chip" data-t="fixa" aria-pressed="' + (tipo === 'fixa') + '">Conta fixa</button><button type="button" class="chip" data-t="parc" aria-pressed="' + (tipo === 'parc') + '">Parcelada</button></div>' +
     '<label class="f">Nome<input type="text" id="nN" maxlength="40" placeholder="Ex.: Internet"></label>' +
     '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f" id="nVl">Valor por mês<input type="text" id="nV" inputmode="decimal" placeholder="R$ 0,00"></label><label class="f">Vence no dia<input type="text" id="nD" inputmode="numeric" placeholder="Ex.: 15"></label></div>' +
-    '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" placeholder="Opcional"></label></div>' +
+    '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" data-nativo="1" placeholder="Opcional"></label></div>' +
     '<p class="small muted">Vai parcelar uma compra nova? Use antes o "Posso gastar isso?".</p></div>' +
     '<label class="f">Primeiro pagamento em<select id="nC">' + opts + '</select></label>' +
     (S.novato ? '<p class="small muted">As contas deste ciclo já saíram do saldo que você informou, por isso o padrão é o próximo ciclo.</p>' : '') +
@@ -1278,7 +1310,7 @@ function sheetAjustes() {
     '<p class="info">O backup é um arquivo .json com todos os seus dados. Guarde num lugar só seu: ele mostra valores, dívidas e nomes. Faça um por semana e antes de qualquer mudança grande.</p></div>' +
     '<div class="set"><h3>Ajuda</h3>' + (podeInstalar() ? linha('aInst', 'Instalar o app neste celular', IOS ? 'Pelo Safari, em poucos passos' : 'Tela cheia e ícone na tela inicial') : '') +
     linha('aTut', 'Ver o tutorial de novo') + '<a class="setrow" href="./privacidade.html" target="_blank" rel="noopener" style="border-top:1px solid var(--line);padding:12px 0;min-height:52px;text-decoration:none;color:inherit"><span class="tx"><b>Política de privacidade</b></span><span class="muted" aria-hidden="true">›</span></a></div>' +
-    '<div class="set"><h3>Conta</h3>' + linha('logout', 'Sair desta conta', esc(USER && USER.email || '')) + linha('aDel', 'Excluir minha conta', 'Apaga todos os dados de forma permanente', 'bad') + '</div>' +
+    '<div class="set"><h3>Conta</h3>' + linha('aZero', 'Recomeçar do zero', 'Apaga os dados e mantém a conta') + linha('logout', 'Sair desta conta', esc(USER && USER.email || '')) + linha('aDel', 'Excluir minha conta', 'Apaga todos os dados de forma permanente', 'bad') + '</div>' +
     '<button class="btn ghost full" data-close>Fechar</button><p class="vers">Prumo v' + VERSAO_APP + '</p>',
     el => {
       const sw = el.querySelector('#swHide');
@@ -1293,6 +1325,7 @@ function sheetAjustes() {
       const ins = el.querySelector('#aInst'); if (ins) ins.onclick = instalar;
       el.querySelector('#aTut').onclick = () => { closeSheet(); setTimeout(abrirTutorial, 60); };
       el.querySelector('#aDel').onclick = sheetExcluirConta;
+      el.querySelector('#aZero').onclick = sheetZerar;
       el.querySelector('#logout').onclick = async () => {
         if (!confirm('Sair desta conta? Os dados continuam na nuvem.')) return;
         try { localStorage.removeItem(LS); } catch (e) {}
@@ -1302,7 +1335,7 @@ function sheetAjustes() {
 }
 
 /* ================= V6 ================= */
-const VERSAO_APP = '6.0';
+const VERSAO_APP = '6.1';
 // ---------- instalação (Android) e instruções (iPhone)
 const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1568,6 +1601,164 @@ function sheetExcluirConta() {
     });
 }
 
+
+/* ================= V6.1 ================= */
+// ---------- saldo do ciclo: informar, editar, remover
+function sheetSaldo(c) {
+  const tem = S.saldoInicial && c in S.saldoInicial, v0 = tem ? S.saldoInicial[c] : null;
+  sheet('<div class="row between" style="flex-wrap:nowrap"><h2>Saldo disponível em ' + cLabel(c) + '</h2><button class="x" data-close aria-label="Fechar" style="width:44px;height:44px;border:0;background:transparent;color:var(--muted);font-size:1.4rem;margin-right:-10px">×</button></div>' +
+    '<p class="small muted" style="margin-top:-6px;line-height:1.45">O que estava na conta, já sem as contas deste ciclo que ainda iam vencer.</p>' +
+    '<input class="money" id="slV" inputmode="decimal" placeholder="R$ 0,00" value="' + (v0 != null ? fmtCent(Math.round(v0 * 100)) : '') + '" aria-label="Saldo disponível">' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="slOk" style="flex:1">Salvar</button>' + (tem ? '<button class="btn danger" id="slDel" style="flex:1">Remover saldo</button>' : '<button class="btn ghost" data-close style="flex:1">Cancelar</button>') + '</div>',
+    el => {
+      const inp = el.querySelector('#slV'); setTimeout(() => inp.focus(), 60);
+      el.querySelector('#slOk').onclick = () => { const v = parseMoney(inp.value); if (!(v >= 0)) { toast('Digite um valor'); return; } closeSheet(); mutate(() => { S.saldoInicial = Object.assign({}, S.saldoInicial || {}, {[c]: v}); }, 'Saldo salvo'); };
+      const d = el.querySelector('#slDel'); if (d) d.onclick = () => { closeSheet(); mutate(() => { const o = Object.assign({}, S.saldoInicial); delete o[c]; S.saldoInicial = o; }, 'Saldo removido'); };
+    });
+}
+
+// ---------- recomeçar do zero (mantém a conta)
+function sheetZerar() {
+  sheet('<h2>Recomeçar do zero</h2><p class="note">Isso apaga <b>todos</b> os dados (contas, gastos, reserva, histórico) e mantém a sua conta. O app volta para a configuração inicial e o tutorial.</p>' +
+    '<button class="btn full" id="zBk">Exportar backup antes</button>' +
+    '<label class="f">Digite sua senha para confirmar<input type="password" id="zP" autocomplete="current-password"></label>' +
+    '<label class="check"><input type="checkbox" id="zOk"><span>Entendo que os dados atuais serão apagados.</span></label><p class="err" id="zErr" role="alert" hidden></p>' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn danger" id="zGo" style="flex:1">Apagar e recomeçar</button><button class="btn ghost" data-close>Cancelar</button></div>',
+    el => {
+      const err = el.querySelector('#zErr'), show = t => { err.textContent = t; err.hidden = !t; };
+      el.querySelector('#zBk').onclick = exportBackup;
+      el.querySelector('#zGo').onclick = async () => {
+        if (!el.querySelector('#zOk').checked) { show('Marque a confirmação.'); return; }
+        const u = AUTH.currentUser; if (!u) return;
+        try { await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, el.querySelector('#zP').value)); }
+        catch (e) { show(AUTH_ERR[e && e.code] || 'Senha incorreta.'); return; }
+        try {
+          if (unsub) { unsub(); unsub = null; }
+          const ref = DOCREF; S = null; UNDO.length = 0;
+          try { localStorage.removeItem(LS); } catch (e) {}
+          if (ref) await deleteDoc(ref);
+          location.replace(location.pathname);
+        } catch (e) { show('Não foi possível apagar agora (' + (e && e.code || 'erro') + '). Tente de novo.'); }
+      };
+    });
+}
+
+// ---------- camada 1: teclado do celular. Mede o espaço real e sobe a folha.
+let kbNativo = 0, kbProprio = 0;
+function aplicarKb() {
+  const vv = window.visualViewport, alt = vv ? vv.height : window.innerHeight;
+  const kb = Math.max(kbNativo, kbProprio);
+  document.documentElement.style.setProperty('--kb', kb + 'px');
+  document.documentElement.style.setProperty('--vvh', (alt + (vv ? vv.offsetTop : 0)) + 'px');
+  document.body.classList.toggle('kb-aberto', kb > 0);
+}
+function medirTeclado() {
+  const vv = window.visualViewport; if (!vv) return;
+  const sobra = window.innerHeight - vv.height - vv.offsetTop;
+  kbNativo = sobra > 80 ? Math.round(sobra) : 0;
+  aplicarKb();
+  const a = document.activeElement;
+  if (kbNativo && a && a.closest && a.closest('.sheet')) setTimeout(() => a.scrollIntoView({block: 'center', behavior: 'smooth'}), 60);
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', medirTeclado); visualViewport.addEventListener('scroll', medirTeclado); }
+// tocar fora de um campo fecha o teclado do celular (o iPhone não faz isso sozinho)
+document.addEventListener('touchstart', e => {
+  const a = document.activeElement, t = e.target;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.classList.contains('kp') && !t.closest('input, textarea, select, label, button')) a.blur();
+  // área vazia fecha o teclado próprio na hora; botões e links fecham depois do clique (para não mudar o layout no meio do toque)
+  if (TEC.alvo && !t.closest('#teclado, input.kp, .sheet, button, a, label')) fecharTeclado();
+}, {passive: true, capture: true});
+document.addEventListener('click', e => {
+  // ao abrir, a tela muda de lugar e o clique pode cair no <body>: ignora os primeiros instantes
+  if (!TEC.alvo || Date.now() - TEC.abertoEm < 450 || e.target === document.body || e.target === document.documentElement) return;
+  if (!e.target.closest('#teclado, input.kp, .sheet')) setTimeout(fecharTeclado, 0);
+}, true);
+// ao entrar num campo de texto, o teclado próprio sai e o do celular entra
+document.addEventListener('focusin', e => { const t = e.target; if (TEC.alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !t.classList.contains('kp')) fecharTeclado(); });
+
+// ---------- camada 2: teclado próprio para valores (entra pelos centavos)
+const TEC = {alvo: null, cent: 0, el: null, segurar: null, abertoEm: 0};
+const fmtCent = n => (n / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const ehValor = i => i && i.tagName === 'INPUT' && i.getAttribute('inputmode') === 'decimal' && !i.dataset.nativo;
+function prepararCampos(raiz) {
+  (raiz.querySelectorAll ? raiz.querySelectorAll('input[inputmode="decimal"]:not([data-nativo]):not(.kp)') : []).forEach(i => {
+    i.classList.add('kp'); i.readOnly = true;
+    { const v = parseMoney(i.value); if (v > 0) i.value = 'R$ ' + fmtCent(Math.round(v * 100)); } i.setAttribute('inputmode', 'none'); i.dataset.kp = '1';
+    i.setAttribute('aria-describedby', 'tecDica');
+    i.addEventListener('focus', () => abrirTeclado(i));
+    i.addEventListener('click', () => abrirTeclado(i));
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) prepararCampos(n); }))).observe(document.body, {childList: true, subtree: true});
+function abrirTeclado(i) {
+  if (TEC.alvo === i && TEC.el) return;
+  if (TEC.alvo) TEC.alvo.classList.remove('ativo');
+  const a = document.activeElement; if (a && a !== i && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !a.classList.contains('kp')) a.blur();
+  TEC.alvo = i; TEC.abertoEm = Date.now(); i.classList.add('ativo');
+  const v = parseMoney(i.value); TEC.cent = v > 0 ? Math.round(v * 100) : 0;
+  if (!TEC.el) {
+    const DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
+    const el = document.createElement('div'); el.id = 'teclado'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Teclado de valores');
+    el.innerHTML = '<div class="barra"><span id="tecDica">Os centavos entram sozinhos</span><button type="button" data-k="ok">Pronto</button></div><div class="grade">' +
+      ['1','2','3','4','5','6','7','8','9','00','0','del'].map(k => '<button type="button" data-k="' + k + '"' + (k === '00' || k === 'del' ? ' class="sec"' : '') + ' aria-label="' + (k === 'del' ? 'Apagar (segure para zerar)' : k) + '">' + (k === 'del' ? DEL : k) + '</button>').join('') + '</div>';
+    el.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); tecla(b.dataset.k);
+      if (b.dataset.k === 'del') { clearTimeout(TEC.segurar); TEC.segurar = setTimeout(() => { TEC.cent = 0; escrever(); vibrar(20); }, 550); } });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => el.addEventListener(t, () => clearTimeout(TEC.segurar)));
+    document.body.appendChild(el); TEC.el = el;
+  }
+  requestAnimationFrame(() => { kbProprio = TEC.el ? TEC.el.offsetHeight : 0; aplicarKb(); setTimeout(() => { if (i.closest('.sheet')) i.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }, 80); });
+}
+function fecharTeclado() {
+  clearTimeout(TEC.segurar);
+  if (TEC.alvo) TEC.alvo.classList.remove('ativo');
+  TEC.alvo = null; if (TEC.el) { TEC.el.remove(); TEC.el = null; }
+  kbProprio = 0; aplicarKb();
+}
+const vibrar = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+function escrever() {
+  const i = TEC.alvo; if (!i) return;
+  i.value = TEC.cent ? 'R$ ' + fmtCent(TEC.cent) : '';
+  i.setAttribute('aria-valuetext', 'R$ ' + fmtCent(TEC.cent));
+  i.dispatchEvent(new Event('input', {bubbles: true}));
+}
+function tecla(k) {
+  if (!TEC.alvo) return;
+  if (k === 'ok') { fecharTeclado(); return; }
+  { const v = parseMoney(TEC.alvo.value); TEC.cent = v > 0 ? Math.round(v * 100) : 0; } // valor pode ter mudado por um favorito
+  if (k === 'del') TEC.cent = Math.floor(TEC.cent / 10);
+  else { const nx = TEC.cent * (k === '00' ? 100 : 10) + (k === '00' ? 0 : +k); if (nx < 1e11) TEC.cent = nx; }
+  vibrar(8); escrever();
+}
+// teclado físico (computador) também funciona com o teclado próprio aberto
+document.addEventListener('keydown', e => {
+  if (!TEC.alvo) return;
+  if (/^[0-9]$/.test(e.key)) { tecla(e.key); e.preventDefault(); }
+  else if (e.key === 'Backspace') { tecla('del'); e.preventDefault(); }
+  else if (e.key === 'Enter' || e.key === 'Escape') { fecharTeclado(); e.preventDefault(); }
+});
+
+// ---------- arrastar a folha para baixo fecha
+(() => {
+  let y0 = 0, dy = 0, folha = null, arrastando = false;
+  document.addEventListener('touchstart', e => {
+    const f = e.target.closest && e.target.closest('#layer .sheet'); if (!f) return;
+    const topo = e.touches[0].clientY - f.getBoundingClientRect().top;
+    const alca = e.target.closest('.grab, h2');
+    if (!alca && (f.scrollTop > 0 || topo > 72 || e.target.closest('input, button:not(.x), select, textarea, a'))) return;
+    folha = f; y0 = e.touches[0].clientY; dy = 0; arrastando = true; f.style.transition = 'none';
+  }, {passive: true});
+  document.addEventListener('touchmove', e => {
+    if (!arrastando || !folha) return;
+    dy = Math.max(0, e.touches[0].clientY - y0); folha.style.transform = 'translateY(' + dy + 'px)';
+  }, {passive: true});
+  document.addEventListener('touchend', () => {
+    if (!arrastando || !folha) return; arrastando = false;
+    const f = folha; folha = null; f.style.transition = 'transform .18s ease-out';
+    if (dy > Math.min(140, f.offsetHeight * 0.35)) { f.style.transform = 'translateY(100%)'; setTimeout(() => closeSheet(), 160); }
+    else f.style.transform = '';
+  }, {passive: true});
+})();
+
 /* ---------- render ---------- */
 function render() {
   const V = document.getElementById('view');
@@ -1578,7 +1769,7 @@ function render() {
   if (USER === 'sem-config') { document.getElementById('sub').textContent = 'Configuração pendente'; V.innerHTML = '<div class="panel"><section class="box"><h2>Falta configurar o Firebase</h2><p class="small muted" style="margin-top:6px">Cole os dados do seu projeto no arquivo firebase-config.js (passo 5 do guia) e publique de novo.</p></section></div>'; return; }
   if (USER === undefined) { V.innerHTML = '<div class="panel"><section class="box"><p class="empty">Carregando…</p></section></div>'; return; }
   if (USER === null) { document.getElementById('sub').textContent = 'Controle do mês'; V.innerHTML = '<div class="panel">' + (telaAuth === 'cadastro' ? viewCadastro() : viewLogin()) + '</div>'; bindLogin(V); return; }
-  if (!S && (PRECISA_VERIF || (CLOUD_EMPTY && !USER.emailVerified))) {
+  if (!S && PRECISA_VERIF) {
     document.getElementById('nav').hidden = true; document.getElementById('sub').textContent = 'Primeiro acesso';
     V.innerHTML = viewConfirmar(); bindConfirmar(V); return;
   }
@@ -1618,17 +1809,12 @@ function bind(V) {
   }, 'Dica dispensada'));
   V.querySelectorAll('[data-go]').forEach(b => b.onclick = () => irAba(b.dataset.go));
   V.querySelectorAll('[data-cy]').forEach(b => b.onclick = () => { viewCycle = ymAdd(viewCycle || hojeC(), +b.dataset.cy); if (viewCycle < S.inicio) viewCycle = S.inicio; render(); });
-  V.querySelectorAll('[data-ini]').forEach(b => b.onclick = () => { if (confirm('Informar o saldo de novo?')) mutate(() => { delete S.saldoInicial[b.dataset.ini]; }, 'Saldo apagado'); });
+  V.querySelectorAll('[data-ini]').forEach(b => b.onclick = () => sheetSaldo(b.dataset.ini));
+  V.querySelectorAll('[data-saldo]').forEach(b => b.onclick = () => sheetSaldo(b.dataset.saldo));
   const os = V.querySelector('#openSim'); if (os) os.onclick = () => sheetGasto(null, 'simular');
   const sal = V.querySelector('#salEdit'); if (sal) sal.onclick = sheetSalario;
   const ni = V.querySelector('#newItem'); if (ni) ni.onclick = sheetNovoItem;
   const ne = V.querySelector('#newEnt'); if (ne) ne.onclick = () => sheetEntrada(null);
-  const ok = V.querySelector('#iniOk');
-  if (ok) ok.onclick = () => {
-    const v = parseMoney(V.querySelector('#iniVal').value);
-    if (!(v >= 0)) { toast('Digite um valor válido'); return; }
-    mutate(() => { S.saldoInicial = Object.assign({}, S.saldoInicial || {}, {[hojeC()]: v}); }, 'Saldo salvo');
-  };
   if (tab === 'sim') bindSim(V);
   V.querySelectorAll('[data-passo]').forEach(b => b.onclick = () => { const k = b.dataset.passo; if (k === 'gasto') sheetGasto(null); else sheetNovoItem(k); });
   const po = V.querySelector('#passosOk'); if (po) po.onclick = () => mutate(() => { S.novato = false; }, 'Primeiros passos concluídos');
@@ -1677,6 +1863,8 @@ paintEye();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 applyTheme(themeMode());
+prepararCampos(document);
+aplicarKb();
 try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch (e) {}
 render();
 initFirebase();
