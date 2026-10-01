@@ -1,6 +1,6 @@
 // Service worker do Prumo: deixa o app abrir mesmo sem internet.
 // Ao mudar algum arquivo do app, aumente o número da versão abaixo (v1 -> v2).
-const VERSAO = 'prumo-v1';
+const VERSAO = 'prumo-v2';
 const APP = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/apple-touch-icon.png'];
 
