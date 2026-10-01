@@ -240,7 +240,22 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
 /* ---------- V6.1: teclado ---------- */
 :root{--kb:0px;--vvh:100vh}
-.sheet{bottom:var(--kb)!important;max-height:calc(var(--vvh) - var(--kb) - 24px)!important;transition:bottom .18s ease-out}
+.sheet{bottom:var(--kb)!important;max-height:calc(var(--vh,100vh) - var(--kbp,0px) - 24px)!important;transition:bottom .18s ease-out}
+/* ---------- V6.2: telas cheias ---------- */
+.sheet.pagina{top:var(--vtop,0px)!important;bottom:auto!important;height:calc(var(--vh,100vh) - var(--kbp,0px))!important;max-height:none!important;border-radius:0;padding:0;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);transition:none}
+@media (prefers-reduced-motion:no-preference){.sheet.pagina{animation:pgEntra .2s ease-out}@keyframes pgEntra{from{transform:translateX(28px);opacity:.5}to{transform:none;opacity:1}}}
+.pg-topo{flex:none;display:flex;align-items:center;gap:4px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px 6px;min-height:56px;box-sizing:border-box;border-bottom:1px solid var(--line);background:var(--bg)}
+.pg-topo h2{margin:0;font-size:1.06rem;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-voltar{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pg-voltar svg{width:24px;height:24px}
+.pg-corpo{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:18px 18px 28px}
+.pg-rodape{flex:none;padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--bg)}
+.pg-rodape > .row{max-width:640px;margin:0 auto;display:flex;gap:10px;flex-wrap:nowrap}
+body.kb-aberto .pg-rodape{padding-bottom:10px}
+.pg-rodape .btn{white-space:nowrap;padding-left:10px;padding-right:10px;font-size:.92rem}
+.pg-icone{width:56px;height:56px;border-radius:16px;background:var(--inset);display:flex;align-items:center;justify-content:center;color:var(--ocre)}
+.pg-icone svg{width:28px;height:28px}
+.pg-pergunta{margin:0;font-size:1.35rem;font-weight:600;letter-spacing:-.01em;line-height:1.25}
 .sheet-in > .row:last-child{position:sticky;bottom:-18px;margin:0 -18px -18px;padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);box-shadow:0 -10px 14px -10px rgba(0,0,0,.35);z-index:2}
 body.kb-aberto .sheet-in > .row:last-child{padding-bottom:12px}
 #rolagem{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px) + var(--kb))}
@@ -766,11 +781,21 @@ function toast(t, action) {
   }
   el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, action ? 5000 : 2400);
 }
-function sheet(html, onMount) {
+const SETA_VOLTAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+function sheet(html, onMount, opts) {
   const L = document.getElementById('layer');
   if (!histFolha) { histFolha = true; history.pushState({prumo: 'folha'}, ''); }
-  L.innerHTML = '<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in"><div class="grab"></div>' + html + '</div></div>';
-  L.querySelector('.scrim').onclick = () => closeSheet();
+  fecharTeclado();
+  if (opts && opts.titulo) {
+    // tela cheia: topo fixo com Voltar, conteúdo com rolagem própria, botões presos no rodapé (acima de qualquer teclado)
+    L.innerHTML = '<div class="sheet pagina" role="dialog" aria-modal="true" aria-labelledby="pgT"><header class="pg-topo"><button type="button" class="pg-voltar" data-close aria-label="Voltar">' + SETA_VOLTAR + '</button><h2 id="pgT">' + esc(opts.titulo) + '</h2></header>' +
+      '<div class="pg-corpo"><div class="sheet-in">' + html + '</div></div><footer class="pg-rodape"></footer></div>';
+    const pg = L.querySelector('.pagina'), rod = pg.querySelector('.pg-rodape'), ult = pg.querySelector('.sheet-in > .row:last-child');
+    if (ult) rod.appendChild(ult); else rod.remove();
+  } else {
+    L.innerHTML = '<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in"><div class="grab"></div>' + html + '</div></div>';
+    L.querySelector('.scrim').onclick = () => closeSheet();
+  }
   L.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeSheet());
   if (onMount) onMount(L.querySelector('.sheet'));
 }
@@ -1095,8 +1120,8 @@ function sheetGasto(g, modo) {
   const edit = !!g, simular = modo === 'simular'; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
   const c = hojeC();
   const opts = Array.from({length: 4}, (_, k) => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === ymAdd(c, 1) ? ' selected' : '') + '>' + cLabel(k) + (k === c ? ' (atual)' : '') + '</option>').join('');
-  sheet('<h2>' + (edit ? 'Editar gasto' : simular ? 'Posso gastar isso?' : 'Novo gasto') + '</h2>' +
-    (simular ? '<p class="small muted" style="margin-top:-6px">Digite o valor e veja o efeito. Nada é lançado até ' + vc() + ' confirmar.</p>' : '') +
+  sheet((simular ? '' : '<h2>' + (edit ? 'Editar gasto' : 'Novo gasto') + '</h2>') +
+    (simular ? '<p class="small muted" style="margin:0">Digite o valor e veja o efeito. Nada é lançado até ' + vc() + ' confirmar.</p>' : '') +
     '<input class="money" id="gV" inputmode="decimal" placeholder="R$ 0,00" value="' + (edit ? String(g.valor).replace('.', ',') : '') + '" aria-label="Valor">' +
     (edit ? '' : '<div id="gImp"></div>') +
     (edit ? '' : '<div class="chips" id="gF" role="group" aria-label="Forma de pagamento"><button class="chip" type="button" data-f="vista" aria-pressed="true">À vista</button><button class="chip" type="button" data-f="parc" aria-pressed="false">Parcelado</button></div>') +
@@ -1108,7 +1133,7 @@ function sheetGasto(g, modo) {
     '</div>' +
     (edit ? '' : (() => { const fs = favoritos(); return fs.length ? '<div class="f" id="gFavW" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Seus frequentes<div class="chips" id="gFav">' + fs.map((f, i) => '<button type="button" class="chip" data-fav="' + i + '">' + esc(f.desc || f.cat) + ' · ' + brl(f.valor) + '</button>').join('') + '</div></div>' : ''; })()) +
     '<div class="chips" id="gC">' + CATS.map(k => '<button class="chip" type="button" aria-pressed="' + (g.cat === k) + '">' + k + '</button>').join('') + '</div>' +
-    '<label class="f"><span id="gDl">Descrição (opcional)</span><input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60"></label>' +
+    '<label class="f"><span id="gDl">Descrição (opcional)</span><input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"></label>' +
     '<label class="f" id="gTl">Data<input type="date" id="gT" value="' + g.data + '"></label>' +
     (simular
       ? '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gLater" style="flex:1">Deixar para depois</button><button class="btn" id="gOk" style="flex:1">Lançar gasto</button></div>'
@@ -1154,7 +1179,7 @@ function sheetGasto(g, modo) {
       };
       const del = el.querySelector('#gDel');
       if (del) del.onclick = () => { mutate(() => { S.gastos = S.gastos.filter(x => x.id !== g.id); }, 'Gasto apagado'); closeSheet(); };
-    });
+    }, simular ? {titulo: 'Posso gastar isso?'} : null);
 }
 function sheetItem(id, c) {
   const it = S.itens.find(x => x.id === id); if (!it) return;
@@ -1184,15 +1209,15 @@ function sheetNovoItem(tipoIni) {
   // conta nova: o saldo informado já desconta as contas deste ciclo, então o padrão é começar no próximo
   const padrao = S.novato && c === hojeC() ? ymAdd(c, 1) : c;
   const opts = [0, 1, 2, 3].map(k => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === padrao ? ' selected' : '') + '>' + cLabel(k) + (k === hojeC() ? ' (este ciclo)' : '') + '</option>').join('');
-  sheet('<h2>Nova conta ou parcela</h2>' + (S.novato ? '<p class="info"><b style="color:var(--ocre)">Dica:</b> comece pelas contas que se repetem todo mês, como internet, celular e academia.</p>' : '') +
+  sheet((S.novato ? '<p class="info"><b style="color:var(--ocre)">Dica:</b> comece pelas contas que se repetem todo mês, como internet, celular e academia.</p>' : '') +
     '<div class="chips" id="nT" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" class="chip" data-t="fixa" aria-pressed="' + (tipo === 'fixa') + '">Conta fixa</button><button type="button" class="chip" data-t="parc" aria-pressed="' + (tipo === 'parc') + '">Parcelada</button></div>' +
-    '<label class="f">Nome<input type="text" id="nN" maxlength="40" placeholder="Ex.: Internet"></label>' +
+    '<label class="f">Nome<input type="text" id="nN" maxlength="40" placeholder="Ex.: Internet" autocomplete="off" autocapitalize="sentences" enterkeyhint="next"></label>' +
     '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f" id="nVl">Valor por mês<input type="text" id="nV" inputmode="decimal" placeholder="R$ 0,00"></label><label class="f">Vence no dia<input type="text" id="nD" inputmode="numeric" placeholder="Ex.: 15"></label></div>' +
     '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" data-nativo="1" placeholder="Opcional"></label></div>' +
     '<p class="small muted">Vai parcelar uma compra nova? Use antes o "Posso gastar isso?".</p></div>' +
     '<label class="f">Primeiro pagamento em<select id="nC">' + opts + '</select></label>' +
     (S.novato ? '<p class="small muted">As contas deste ciclo já saíram do saldo que você informou, por isso o padrão é o próximo ciclo.</p>' : '') +
-    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="nOk" style="flex:1">Adicionar</button><button class="btn ghost" data-close>Cancelar</button></div>',
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="nOk" style="flex:1">Adicionar</button></div>',
     el => {
       const pinta = () => { el.querySelector('#nParc').hidden = tipo !== 'parc'; el.querySelector('#nVl').firstChild.textContent = tipo === 'parc' ? 'Valor da parcela' : 'Valor por mês'; el.querySelector('#nOk').textContent = tipo === 'parc' ? 'Adicionar parcelas' : 'Adicionar conta'; };
       el.querySelectorAll('#nT .chip').forEach(b => b.onclick = () => { tipo = b.dataset.t; el.querySelectorAll('#nT .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); pinta(); });
@@ -1207,7 +1232,7 @@ function sheetNovoItem(tipoIni) {
         mutate(() => { if (parc) registrarCredito(); S.itens.push({id: uid(), nome, valor: v, de: el.querySelector('#nC').value, n: parc ? p : null, rec: !parc, divida: parc, dia: d >= 1 && d <= 31 ? d : null, custo: parc ? (j > 0 ? String(j).replace('.', ',') + '% ao mês' : 'parcelado') : 'conta fixa', juros: parc && j >= 0 ? j : null, prio: 40, criado: parc ? Date.now() : undefined}); },
           parc ? 'Parcelas adicionadas' : 'Conta adicionada');
       };
-    });
+    }, {titulo: 'Nova conta ou parcela'});
 }
 function sheetEntrada(e) {
   const edit = !!e, c = hojeC();
@@ -1335,7 +1360,7 @@ function sheetAjustes() {
 }
 
 /* ================= V6 ================= */
-const VERSAO_APP = '6.1';
+const VERSAO_APP = '6.2';
 // ---------- instalação (Android) e instruções (iPhone)
 const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1485,21 +1510,38 @@ function cardReserva() {
 }
 function sheetReserva() {
   const R = S.reserva || {meta: 0, base: 0}, c = hojeC(), g = guardadoReserva();
-  sheet('<h2>Reserva</h2><p class="small muted" style="margin-top:-6px">Guardado hoje: <b style="color:var(--ink)">' + brl(g) + '</b></p>' +
-    '<div class="set"><h3>Movimentar</h3><label class="f">Valor<input type="text" id="rV" inputmode="decimal" placeholder="R$ 0,00"></label>' +
-    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="rIn" style="flex:1">Guardar</button><button class="btn" id="rOut" style="flex:1">Retirar</button></div>' +
-    '<p class="small muted">Guardar tira o valor do que você pode gastar em ' + cLabel(c) + '. Retirar devolve.</p></div><div class="hr"></div>' +
-    '<div class="set"><h3>Meta e saldo inicial</h3><label class="f">Meta da reserva<input type="text" id="rM" inputmode="decimal" value="' + (R.meta ? String(R.meta).replace('.', ',') : '') + '" placeholder="Ex.: 3.000,00"></label>' +
-    '<label class="f">Já tinha guardado antes do app<input type="text" id="rB" inputmode="decimal" value="' + (R.base ? String(R.base).replace('.', ',') : '') + '" placeholder="R$ 0,00"></label>' +
-    '<button class="btn full" id="rSave">Salvar meta</button></div><button class="btn ghost full" data-close>Fechar</button>',
+  if (!R.meta && !g) { sheetMetaReserva(); return; }
+  const meta = R.meta || 0, pct = meta ? Math.min(100, Math.round(g / meta * 100)) : 0;
+  sheet('<section class="box"><div class="small muted">Guardado</div>' +
+      '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><b class="num" style="font-size:1.7rem;letter-spacing:-.02em">' + brl(g) + '</b>' + (meta ? '<span class="small muted">de ' + brl(meta) + '</span>' : '') + '</div>' +
+      (meta ? '<div class="bar" style="height:10px;margin-top:10px"><i style="width:' + pct + '%;background:var(--ocre)"></i></div>' : '') +
+      '<div class="row between" style="margin-top:8px;gap:8px"><span class="small muted">' + (meta ? (g >= meta ? 'Meta alcançada!' : pct + '% da meta · faltam ' + brl(r2(meta - g))) : 'Sem meta definida') + '</span>' +
+      '<button type="button" class="link" id="rMeta">' + (meta ? 'Alterar meta' : 'Criar meta') + '</button></div></section>' +
+    '<h3 style="margin:6px 0 0;font-size:1rem">Movimentar</h3>' +
+    '<label class="f">Valor<input type="text" id="rV" inputmode="decimal" placeholder="R$ 0,00"></label>' +
+    '<p class="small muted" style="margin:0">Guardar tira o valor do que ' + vc() + ' pode gastar em ' + cLabel(c) + '. Retirar devolve.</p>' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="rIn" style="flex:1">Guardar</button><button class="btn" id="rOut" style="flex:1">Retirar</button></div>',
     el => {
+      el.querySelector('#rMeta').onclick = () => sheetMetaReserva();
       const mov = sinal => { const v = parseMoney(el.querySelector('#rV').value); if (!(v > 0)) { toast('Digite um valor'); return; } if (sinal < 0 && v > g) { toast('A reserva tem só ' + brl(g)); return; }
         if (sinal > 0) { const livre = sobra(c).fim; if (v > livre && !confirm('Guardar ' + brl(v) + ' deixa ' + cLabel(c) + ' sem dinheiro livre (faltariam ' + brl(r2(v - livre)) + '). Guardar mesmo assim?')) return; }
         closeSheet(); mutate(() => { S.aportes = [...(S.aportes || []), {id: uid(), c, v: r2(v * sinal), origem: 'manual', t: Date.now()}]; }, (sinal > 0 ? 'Guardado: ' : 'Retirado: ') + brl(v)); };
       el.querySelector('#rIn').onclick = () => mov(1); el.querySelector('#rOut').onclick = () => mov(-1);
+    }, {titulo: 'Reserva'});
+}
+function sheetMetaReserva() {
+  const R = S.reserva || {meta: 0, base: 0}, nova = !R.meta;
+  sheet((nova ? '<div class="pg-icone">' + IC.star + '</div>' : '') +
+    '<p class="pg-pergunta">Quanto ' + vc() + ' quer ter guardado?</p>' +
+    (nova ? '<p class="small muted" style="margin:0">A cada fim de ciclo, o Prumo pergunta se quer levar a sobra para a reserva. A meta mostra o quanto falta.</p>' : '') +
+    '<label class="f">Meta da reserva<input type="text" id="rM" inputmode="decimal" value="' + (R.meta ? String(R.meta).replace('.', ',') : '') + '" placeholder="Ex.: R$ 3.000,00"></label>' +
+    '<label class="f">Já tinha guardado antes do app (opcional)<input type="text" id="rB" inputmode="decimal" value="' + (R.base ? String(R.base).replace('.', ',') : '') + '" placeholder="R$ 0,00"></label>' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="rSave" style="flex:1">' + (nova ? 'Criar meta' : 'Salvar meta') + '</button></div>',
+    el => {
       el.querySelector('#rSave').onclick = () => { const m = parseMoney(el.querySelector('#rM').value) || 0, b = parseMoney(el.querySelector('#rB').value) || 0;
-        closeSheet(); mutate(() => { S.reserva = {meta: Math.max(0, m), base: Math.max(0, b)}; }, 'Meta salva'); };
-    });
+        if (!(m > 0)) { toast('Digite o valor da meta'); return; }
+        closeSheet(); mutate(() => { S.reserva = {meta: Math.max(0, m), base: Math.max(0, b)}; }, nova ? 'Meta criada' : 'Meta salva'); };
+    }, {titulo: nova ? 'Criar meta de reserva' : 'Alterar meta'});
 }
 
 
@@ -1647,9 +1689,10 @@ function sheetZerar() {
 let kbNativo = 0, kbProprio = 0;
 function aplicarKb() {
   const vv = window.visualViewport, alt = vv ? vv.height : window.innerHeight;
-  const kb = Math.max(kbNativo, kbProprio);
-  document.documentElement.style.setProperty('--kb', kb + 'px');
-  document.documentElement.style.setProperty('--vvh', (alt + (vv ? vv.offsetTop : 0)) + 'px');
+  const kb = Math.max(kbNativo, kbProprio), st = document.documentElement.style;
+  // --vh já é a área visível (o iPhone encolhe com o teclado): não descontar o teclado do celular de novo
+  st.setProperty('--kb', kb + 'px'); st.setProperty('--kbp', kbProprio + 'px');
+  st.setProperty('--vh', alt + 'px'); st.setProperty('--vtop', (vv ? Math.max(0, vv.offsetTop) : 0) + 'px');
   document.body.classList.toggle('kb-aberto', kb > 0);
 }
 function medirTeclado() {
@@ -1658,7 +1701,7 @@ function medirTeclado() {
   kbNativo = sobra > 80 ? Math.round(sobra) : 0;
   aplicarKb();
   const a = document.activeElement;
-  if (kbNativo && a && a.closest && a.closest('.sheet')) setTimeout(() => a.scrollIntoView({block: 'center', behavior: 'smooth'}), 60);
+  if (kbNativo && a && a.closest && a.closest('.sheet')) setTimeout(() => a.scrollIntoView({block: a.closest('.pagina') ? 'nearest' : 'center', behavior: a.closest('.pagina') ? 'auto' : 'smooth'}), 60);
 }
 if (window.visualViewport) { visualViewport.addEventListener('resize', medirTeclado); visualViewport.addEventListener('scroll', medirTeclado); }
 // tocar fora de um campo fecha o teclado do celular (o iPhone não faz isso sozinho)
@@ -1741,7 +1784,7 @@ document.addEventListener('keydown', e => {
 (() => {
   let y0 = 0, dy = 0, folha = null, arrastando = false;
   document.addEventListener('touchstart', e => {
-    const f = e.target.closest && e.target.closest('#layer .sheet'); if (!f) return;
+    const f = e.target.closest && e.target.closest('#layer .sheet:not(.pagina)'); if (!f) return;
     const topo = e.touches[0].clientY - f.getBoundingClientRect().top;
     const alca = e.target.closest('.grab, h2');
     if (!alca && (f.scrollTop > 0 || topo > 72 || e.target.closest('input, button:not(.x), select, textarea, a'))) return;
