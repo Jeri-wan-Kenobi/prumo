@@ -294,8 +294,10 @@ let tab = 'hoje', viewCycle = null;
 let sim = null;
 
 const dia = () => (S && S.diaSalario) || 24;
-const cicloDe = d => { const y = d.getFullYear(), m = d.getMonth() + 1; return d.getDate() >= dia() ? y + '-' + pad(m) : ymAdd(y + '-' + pad(m), -1); };
-const cicloInicio = c => { const [y, m] = c.split('-').map(Number); return new Date(y, m - 1, dia()); };
+// Cada ciclo leva o nome do mês das contas que ele paga:
+// o salário de 24/09 paga as contas de outubro, então 24/09 a 23/10 é o ciclo "out".
+const cicloDe = d => { const y = d.getFullYear(), m = d.getMonth() + 1; return d.getDate() >= dia() ? ymAdd(y + '-' + pad(m), 1) : y + '-' + pad(m); };
+const cicloInicio = c => { const [y, m] = c.split('-').map(Number); return new Date(y, m - 2, dia()); };
 const cicloFim = c => { const d = cicloInicio(ymAdd(c, 1)); d.setDate(d.getDate() - 1); return d; };
 const hojeC = () => cicloDe(today());
 
@@ -321,7 +323,7 @@ function ciclosDe(it) {
 function vencData(it, c) {
   if (!it.dia) return null;
   const [y, m] = c.split('-').map(Number);
-  return it.dia >= dia() ? new Date(y, m - 1, it.dia) : new Date(y, m, it.dia);
+  return it.dia >= dia() ? new Date(y, m - 2, it.dia) : new Date(y, m - 1, it.dia);
 }
 const pago = (c, id) => !!(S.pagos && S.pagos[c] && S.pagos[c][id]);
 const itensDo = c => S.itens.map(it => ({it, v: valorEm(it, c)})).filter(x => x.v != null && x.v > 0);
@@ -399,6 +401,23 @@ function setHide(on) {
   paintEye(); render();
 }
 
+/* ---------- migração: ciclo pelo mês das contas ---------- */
+// Dados antigos chamavam o período 24/09 a 23/10 de "set". Agora ele é "out".
+// As contas (itens, parcelas, pagos) já estavam no mês certo e não mudam;
+// só o que é ligado ao período (início, saldo informado, valores a receber, mês sem salário, dicas) anda +1.
+function migrar(d) {
+  if (!d || d.cicloContas) return d;
+  const sh = k => ymAdd(k, 1);
+  const shKeys = o => o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sh(k), v])) : o;
+  if (d.inicio) d.inicio = sh(d.inicio);
+  d.saldoInicial = shKeys(d.saldoInicial);
+  d.dispensadas = shKeys(d.dispensadas);
+  if (Array.isArray(d.semSalario)) d.semSalario = d.semSalario.map(sh);
+  (d.entradas || []).forEach(e => { if (e.ciclo) e.ciclo = sh(e.ciclo); });
+  d.cicloContas = 1;
+  return d;
+}
+
 /* ---------- persistência (Firebase) ---------- */
 let LS = 'prumo:cache';
 // texto estável (chaves em ordem) para comparar estados sem falso alarme
@@ -443,7 +462,7 @@ function initFirebase() {
     USER = u || null; DOCREF = null; S = null; CLOUD_EMPTY = false; UNDO.length = 0; sim = null; tab = 'hoje';
     if (!u) { setSync('Desconectado', 'err'); render(); return; }
     LS = 'prumo:cache:' + u.uid;
-    try { const raw = localStorage.getItem(LS); if (raw) S = JSON.parse(raw); } catch (e) {}
+    try { const raw = localStorage.getItem(LS); if (raw) S = migrar(JSON.parse(raw)); } catch (e) {}
     DOCREF = doc(fs, 'usuarios', u.uid, 'dados', 'estado');
     setSync('Conectando');
     render();
@@ -456,10 +475,12 @@ function initFirebase() {
       if (snap.exists()) {
         CLOUD_EMPTY = false;
         if (recentEdit()) return;
-        const data = snap.data();
+        const raw = snap.data(), antigo = !raw.cicloContas;
+        const data = migrar(JSON.parse(JSON.stringify(raw)));
+        if (antigo) { S = data; UNDO.length = 0; save(); render(); return; } // grava a versão convertida na nuvem
         if (stable(data) === stable(S)) return;
         if (S) UNDO.length = 0; // mudou em outro aparelho: o histórico local não vale mais
-        S = JSON.parse(JSON.stringify(data)); cacheLocal(); render();
+        S = data; cacheLocal(); render();
       } else if (!cache) {
         // a nuvem está vazia (primeiro acesso): se houver cópia local, ela sobe; se não, tela de boas-vindas
         if (S) flush(); else { CLOUD_EMPTY = true; render(); }
@@ -673,7 +694,7 @@ function viewHoje() {
 function viewMes() {
   const c = viewCycle || hojeC(), s = sobra(c), r = s.r;
   const ini = cicloInicio(c), fim = cicloFim(c);
-  let h = '<section class="box"><div class="cycle-nav"><button data-cy="-1" aria-label="Ciclo anterior">‹</button><div class="c"><b>' + cLabel(c) + (c === hojeC() ? ' (atual)' : '') + '</b><span>' + ddmm(ini) + ' a ' + ddmm(fim) + '</span></div><button data-cy="1" aria-label="Próximo ciclo">›</button></div>' +
+  let h = '<section class="box"><div class="cycle-nav"><button data-cy="-1" aria-label="Ciclo anterior">‹</button><div class="c"><b>Contas de ' + cLabel(c) + (c === hojeC() ? ' (atual)' : '') + '</b><span>salário de ' + ddmm(ini) + ', até ' + ddmm(fim) + '</span></div><button data-cy="1" aria-label="Próximo ciclo">›</button></div>' +
     '<div class="tiles"><div class="tile"><span>Entradas</span><b>' + brl(r2(s.carry + r.inicial + r.salario + r.entradas)) + '</b></div><div class="tile"><span>Compromissos</span><b>' + brl(r.compromissos) + '</b></div>' +
     '<div class="tile"><span>Gastos lançados</span><b>' + brl(r.gastos) + '</b></div><div class="tile"><span>Sobra</span><b class="' + (s.fim < 0 ? 'bad' : 'good') + '">' + brl(s.fim) + '</b></div></div></section>';
 
@@ -958,7 +979,7 @@ function importBackup(file) {
       '<div class="tile"><span>A receber</span><b>' + d.entradas.length + '</b></div><div class="tile"><span>Feito em</span><b>' + (quando && !isNaN(quando) ? ddmm(quando) + '/' + String(quando.getFullYear()).slice(2) : '?') + '</b></div></div>' +
       '<p class="note">Os dados atuais serão substituídos pelos do arquivo. Se mudar de ideia, toque em Desfazer logo em seguida.</p>' +
       '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="impOk" style="flex:1">Substituir dados</button><button class="btn ghost" data-close>Cancelar</button></div>',
-      el => el.querySelector('#impOk').onclick = () => { closeSheet(); mutate(() => { S = JSON.parse(JSON.stringify(d)); }, 'Backup importado'); });
+      el => el.querySelector('#impOk').onclick = () => { closeSheet(); mutate(() => { S = migrar(JSON.parse(JSON.stringify(d))); }, 'Backup importado'); });
   };
   rd.readAsText(file);
 }
@@ -1015,7 +1036,7 @@ function render() {
     V.innerHTML = '<div class="panel"><section class="box"><p class="empty">Carregando seus dados…</p></section></div>'; return;
   }
   const c = hojeC(), dias = Math.max(1, Math.round((cicloFim(c) - today()) / 864e5) + 1);
-  document.getElementById('sub').textContent = 'Ciclo ' + cLabel(c) + ', salário em ' + dias + (dias === 1 ? ' dia' : ' dias');
+  document.getElementById('sub').textContent = 'Contas de ' + cLabel(c) + ', próximo salário em ' + dias + (dias === 1 ? ' dia' : ' dias');
   const html = tab === 'mes' ? viewMes() : tab === 'dividas' ? viewDividas() : tab === 'receber' ? viewReceber() : tab === 'sim' ? viewSim() : viewHoje();
   V.innerHTML = '<div class="panel">' + html + '</div>';
   bind(V);
