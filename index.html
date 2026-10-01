@@ -294,10 +294,10 @@ let tab = 'hoje', viewCycle = null;
 let sim = null;
 
 const dia = () => (S && S.diaSalario) || 24;
-// Cada ciclo leva o nome do mês das contas que ele paga:
-// o salário de 24/09 paga as contas de outubro, então 24/09 a 23/10 é o ciclo "out".
-const cicloDe = d => { const y = d.getFullYear(), m = d.getMonth() + 1; return d.getDate() >= dia() ? ymAdd(y + '-' + pad(m), 1) : y + '-' + pad(m); };
-const cicloInicio = c => { const [y, m] = c.split('-').map(Number); return new Date(y, m - 2, dia()); };
+// Cada ciclo leva o nome do mês em que o salário cai e as contas são pagas:
+// o salário de 24/09 abre o ciclo "set", que paga (adiantado) as contas que vencem em outubro.
+const cicloDe = d => { const y = d.getFullYear(), m = d.getMonth() + 1; return d.getDate() >= dia() ? y + '-' + pad(m) : ymAdd(y + '-' + pad(m), -1); };
+const cicloInicio = c => { const [y, m] = c.split('-').map(Number); return new Date(y, m - 1, dia()); };
 const cicloFim = c => { const d = cicloInicio(ymAdd(c, 1)); d.setDate(d.getDate() - 1); return d; };
 const hojeC = () => cicloDe(today());
 
@@ -323,7 +323,7 @@ function ciclosDe(it) {
 function vencData(it, c) {
   if (!it.dia) return null;
   const [y, m] = c.split('-').map(Number);
-  return it.dia >= dia() ? new Date(y, m - 2, it.dia) : new Date(y, m - 1, it.dia);
+  return it.dia >= dia() ? new Date(y, m - 1, it.dia) : new Date(y, m, it.dia);
 }
 const pago = (c, id) => !!(S.pagos && S.pagos[c] && S.pagos[c][id]);
 const itensDo = c => S.itens.map(it => ({it, v: valorEm(it, c)})).filter(x => x.v != null && x.v > 0);
@@ -401,20 +401,22 @@ function setHide(on) {
   paintEye(); render();
 }
 
-/* ---------- migração: ciclo pelo mês das contas ---------- */
-// Dados antigos chamavam o período 24/09 a 23/10 de "set". Agora ele é "out".
-// As contas (itens, parcelas, pagos) já estavam no mês certo e não mudam;
-// só o que é ligado ao período (início, saldo informado, valores a receber, mês sem salário, dicas) anda +1.
+/* ---------- migração ---------- */
+// A versão 2 do app avançou um mês o que é ligado ao período (marcando cicloContas = 1).
+// Esta versão volta ao mês do pagamento: desfaz esse avanço uma única vez e marca cicloContas = 2.
+// (O valor 2 também impede que um aparelho ainda com a versão 2 converta de novo.)
 function migrar(d) {
-  if (!d || d.cicloContas) return d;
-  const sh = k => ymAdd(k, 1);
-  const shKeys = o => o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sh(k), v])) : o;
-  if (d.inicio) d.inicio = sh(d.inicio);
-  d.saldoInicial = shKeys(d.saldoInicial);
-  d.dispensadas = shKeys(d.dispensadas);
-  if (Array.isArray(d.semSalario)) d.semSalario = d.semSalario.map(sh);
-  (d.entradas || []).forEach(e => { if (e.ciclo) e.ciclo = sh(e.ciclo); });
-  d.cicloContas = 1;
+  if (!d) return d;
+  if (d.cicloContas === 1) {
+    const sh = k => ymAdd(k, -1);
+    const shKeys = o => o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sh(k), v])) : o;
+    if (d.inicio) d.inicio = sh(d.inicio);
+    d.saldoInicial = shKeys(d.saldoInicial);
+    d.dispensadas = shKeys(d.dispensadas);
+    if (Array.isArray(d.semSalario)) d.semSalario = d.semSalario.map(sh);
+    (d.entradas || []).forEach(e => { if (e.ciclo) e.ciclo = sh(e.ciclo); });
+  }
+  d.cicloContas = 2;
   return d;
 }
 
@@ -475,7 +477,7 @@ function initFirebase() {
       if (snap.exists()) {
         CLOUD_EMPTY = false;
         if (recentEdit()) return;
-        const raw = snap.data(), antigo = !raw.cicloContas;
+        const raw = snap.data(), antigo = raw.cicloContas !== 2;
         const data = migrar(JSON.parse(JSON.stringify(raw)));
         if (antigo) { S = data; UNDO.length = 0; save(); render(); return; } // grava a versão convertida na nuvem
         if (stable(data) === stable(S)) return;
@@ -694,7 +696,7 @@ function viewHoje() {
 function viewMes() {
   const c = viewCycle || hojeC(), s = sobra(c), r = s.r;
   const ini = cicloInicio(c), fim = cicloFim(c);
-  let h = '<section class="box"><div class="cycle-nav"><button data-cy="-1" aria-label="Ciclo anterior">‹</button><div class="c"><b>Contas de ' + cLabel(c) + (c === hojeC() ? ' (atual)' : '') + '</b><span>salário de ' + ddmm(ini) + ', até ' + ddmm(fim) + '</span></div><button data-cy="1" aria-label="Próximo ciclo">›</button></div>' +
+  let h = '<section class="box"><div class="cycle-nav"><button data-cy="-1" aria-label="Ciclo anterior">‹</button><div class="c"><b>Pagamentos de ' + cLabel(c) + (c === hojeC() ? ' (atual)' : '') + '</b><span>salário de ' + ddmm(ini) + ', até ' + ddmm(fim) + '</span></div><button data-cy="1" aria-label="Próximo ciclo">›</button></div>' +
     '<div class="tiles"><div class="tile"><span>Entradas</span><b>' + brl(r2(s.carry + r.inicial + r.salario + r.entradas)) + '</b></div><div class="tile"><span>Compromissos</span><b>' + brl(r.compromissos) + '</b></div>' +
     '<div class="tile"><span>Gastos lançados</span><b>' + brl(r.gastos) + '</b></div><div class="tile"><span>Sobra</span><b class="' + (s.fim < 0 ? 'bad' : 'good') + '">' + brl(s.fim) + '</b></div></div></section>';
 
@@ -776,39 +778,45 @@ function viewSim() {
     '<label class="f">Primeira parcela no ciclo de<select id="sC">' + opts + '</select></label>' +
     '</section><div id="simOut" style="display:flex;flex-direction:column;gap:12px"></div>';
 }
-function simOut() {
-  const el = document.getElementById('simOut'); if (!el) return;
-  const valor = parseMoney(sim.valor);
-  if (!(valor > 0)) { el.innerHTML = '<p class="info">Digite o valor da compra para ver o efeito nos próximos meses.</p>'; return; }
-  const res = simular(valor, sim.n, sim.start);
+// Veredito + efeitos de uma compra parcelada. modo 'sim' (antes de comprar) ou 'gasto' (compra já feita).
+function veredito(valor, n, start, modo) {
+  const res = simular(valor, n, start);
   const sal = S.salario || 1;
   const on = Math.max(0, Math.min(10, Math.round(res.min / (0.2 * sal) * 10)));
   let txt = '', alt = '';
   if (res.nv === 'tr') txt = 'Cabe com folga: o mês mais apertado continua acima de 20% do salário.';
   if (res.nv === 'at') txt = 'Cabe, mas ' + cLabel(res.mes) + ' fica apertado.';
   if (res.nv === 'arr') txt = cLabel(res.mes) + ' ficaria com ' + brl(res.min) + ' para o mês inteiro.';
-  if (res.nv === 'nc') txt = 'Na prática, isso vira outra dívida para cobrir a falta.';
+  if (res.nv === 'nc') txt = modo === 'gasto' ? cLabel(res.mes) + ' não fecha. Vale rever outros gastos desse mês ou antecipar um valor a receber.' : 'Na prática, isso vira outra dívida para cobrir a falta.';
   if (res.nv !== 'tr') {
     let best = null;
-    [1, 2, 3, 4, 5, 6, 8, 10, 12].forEach(k => { if (k === sim.n) return; const t = simular(valor, k, sim.start); if (!best || t.min > best.min) best = {k, ...t}; });
-    if (best && RANK[best.nv] > RANK[res.nv]) alt += 'Em ' + best.k + 'x, o mês mais apertado fica com ' + brl(best.min) + ' (' + LV[best.nv].toLowerCase() + '). ';
-    for (let i = 1; i <= 18; i++) { const st = ymAdd(sim.start, i); const t = simular(valor, sim.n, st); if (t.nv === 'tr') { alt += 'Começando em ' + cLabel(st) + ', cabe com folga: a menor sobra seria ' + brl(t.min) + '.'; break; } }
+    [1, 2, 3, 4, 5, 6, 8, 10, 12].forEach(k => { if (k === n || (modo === 'gasto' && k === 1)) return; const t = simular(valor, k, start); if (!best || t.min > best.min) best = {k, ...t}; });
+    if (best && RANK[best.nv] > RANK[res.nv]) alt += (modo === 'gasto' ? 'Se ainda der para escolher, em ' : 'Em ') + best.k + 'x o mês mais apertado fica com ' + brl(best.min) + ' (' + LV[best.nv].toLowerCase() + '). ';
+    if (modo !== 'gasto') for (let i = 1; i <= 18; i++) { const st = ymAdd(start, i); const t = simular(valor, n, st); if (t.nv === 'tr') { alt += 'Começando em ' + cLabel(st) + ', cabe com folga: a menor sobra seria ' + brl(t.min) + '.'; break; } }
   }
   const di = dividasInfo();
   const novoFim = !di.livreEm || res.fim > di.livreEm ? res.fim : di.livreEm;
   const pend = r2(resumo(res.mes).pendente);
-  el.innerHTML =
+  const html =
     '<section class="verdict ' + res.nv + '" aria-live="polite"><div class="lv">' + LV[res.nv] + '</div>' +
     '<div class="lb">' + (res.nv === 'nc' ? cLabel(res.mes) + ' ficaria negativo em' : 'Menor sobra, em ' + cLabel(res.mes)) + '</div>' +
     '<div class="vn">' + brl(res.nv === 'nc' ? -res.min : res.min) + '</div>' +
     '<div class="vs" aria-hidden="true">' + segs(on) + '</div>' +
     '<div class="vt">' + esc(txt) + '</div>' + (alt ? '<div class="alt">' + esc(alt.trim()) + '</div>' : '') + '</section>' +
     '<section class="box"><h2>Efeitos</h2>' +
-    '<div class="eff"><div class="k">Parcela</div><div class="v">' + sim.n + 'x de ' + brl(res.parc) + ', de ' + cLabel(sim.start) + ' a ' + cLabel(res.fim) + '</div></div>' +
+    '<div class="eff"><div class="k">Parcela</div><div class="v">' + n + 'x de ' + brl(res.parc) + ', de ' + cLabel(start) + ' a ' + cLabel(res.fim) + '</div></div>' +
     '<div class="eff"><div class="k">Total ainda a pagar</div><div class="v"><span class="from">' + brl(di.total) + '</span> para ' + brl(r2(di.total + valor)) + '</div></div>' +
     '<div class="eff"><div class="k">Livre de dívidas em</div><div class="v">' + (novoFim === di.livreEm ? cLabel(novoFim) + ' (não muda)' : '<span class="from">' + (di.livreEm ? cLabel(di.livreEm) : 'agora') + '</span> para ' + cLabel(novoFim)) + '</div></div>' +
     (pend > 0 ? '<p class="small muted" style="margin-top:6px">Não considera ' + brl(pend) + ' a receber em ' + cLabel(res.mes) + ' que ainda não chegaram.</p>' : '') +
-    '</section>' +
+    '</section>';
+  return {res, html};
+}
+function simOut() {
+  const el = document.getElementById('simOut'); if (!el) return;
+  const valor = parseMoney(sim.valor);
+  if (!(valor > 0)) { el.innerHTML = '<p class="info">Digite o valor da compra para ver o efeito nos próximos meses.</p>'; return; }
+  const {res, html} = veredito(valor, sim.n, sim.start, 'sim');
+  el.innerHTML = html +
     '<label class="f">Nome da compra (para adicionar)<input type="text" id="sNome" maxlength="40" placeholder="Ex.: pedaleira" value="' + esc(sim.nome) + '"></label>' +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" style="flex:1" id="simLater">Deixar para depois</button><button class="btn" style="flex:1" id="simAdd">Adicionar mesmo assim</button></div>';
   document.getElementById('sNome').oninput = e => { sim.nome = e.target.value; };
@@ -832,23 +840,53 @@ function bindSim(V) {
 
 /* ---------- formulários ---------- */
 const CATS = ['Gasolina', 'Comida', 'Lanche', 'Celular', 'Lazer', 'Moto', 'Outro'];
+const NPARC = [2, 3, 4, 5, 6, 8, 10, 12];
 function sheetGasto(g) {
   const edit = !!g; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
+  const c = hojeC();
+  const opts = Array.from({length: 4}, (_, k) => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === ymAdd(c, 1) ? ' selected' : '') + '>' + cLabel(k) + (k === c ? ' (atual)' : '') + '</option>').join('');
   sheet('<h2>' + (edit ? 'Editar gasto' : 'Novo gasto') + '</h2>' +
     '<input class="money" id="gV" inputmode="decimal" placeholder="R$ 0,00" value="' + (edit ? String(g.valor).replace('.', ',') : '') + '" aria-label="Valor">' +
+    (edit ? '' : '<div class="chips" id="gF" role="group" aria-label="Forma de pagamento"><button class="chip" type="button" data-f="vista" aria-pressed="true">À vista</button><button class="chip" type="button" data-f="parc" aria-pressed="false">Parcelado</button></div>') +
+    '<div id="gParc" hidden style="display:flex;flex-direction:column;gap:12px">' +
+      '<p class="small muted" id="gParcInfo">Digite o valor <b>total</b> da compra. As parcelas entram nos compromissos, não nos gastos de hoje.</p>' +
+      '<div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Parcelas<div class="chips" id="gN">' + NPARC.map(k => '<button type="button" class="chip" data-n="' + k + '" aria-pressed="' + (k === 3) + '">' + k + 'x</button>').join('') + '</div></div>' +
+      '<label class="f">Primeira parcela paga em<select id="gS">' + opts + '</select></label>' +
+      '<div id="gOut" style="display:flex;flex-direction:column;gap:12px"></div>' +
+    '</div>' +
     '<div class="chips" id="gC">' + CATS.map(k => '<button class="chip" type="button" aria-pressed="' + (g.cat === k) + '">' + k + '</button>').join('') + '</div>' +
-    '<label class="f">Descrição (opcional)<input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60"></label>' +
-    '<label class="f">Data<input type="date" id="gT" value="' + g.data + '"></label>' +
+    '<label class="f"><span id="gDl">Descrição (opcional)</span><input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60"></label>' +
+    '<label class="f" id="gTl">Data<input type="date" id="gT" value="' + g.data + '"></label>' +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gOk" style="flex:1">' + (edit ? 'Salvar gasto' : 'Lançar gasto') + '</button>' + (edit ? '<button class="btn danger" id="gDel">Apagar</button>' : '<button class="btn ghost" data-close>Cancelar</button>') + '</div>',
     el => {
-      let cat = g.cat || '';
+      let cat = g.cat || '', forma = 'vista', n = 3, start = ymAdd(c, 1);
       const v = el.querySelector('#gV'); setTimeout(() => v.focus(), 60);
+      const parc = el.querySelector('#gParc'), out = el.querySelector('#gOut'), ok = el.querySelector('#gOk');
+      const atualizar = () => {
+        const isP = forma === 'parc';
+        parc.hidden = !isP;
+        el.querySelector('#gTl').hidden = isP;
+        el.querySelector('#gDl').textContent = isP ? 'Nome da compra' : 'Descrição (opcional)';
+        ok.textContent = isP ? 'Adicionar parcelas' : (edit ? 'Salvar gasto' : 'Lançar gasto');
+        if (!isP) return;
+        const val = parseMoney(v.value);
+        out.innerHTML = val > 0 ? veredito(val, n, start, 'gasto').html : '<p class="info">Digite o valor total para ver o efeito nos próximos meses.</p>';
+      };
+      v.addEventListener('input', () => { if (forma === 'parc') atualizar(); });
+      el.querySelectorAll('#gF .chip').forEach(b => b.onclick = () => { forma = b.dataset.f; el.querySelectorAll('#gF .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); atualizar(); });
+      el.querySelectorAll('#gN .chip').forEach(b => b.onclick = () => { n = +b.dataset.n; el.querySelectorAll('#gN .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); atualizar(); });
+      el.querySelector('#gS').onchange = e => { start = e.target.value; atualizar(); };
       el.querySelectorAll('#gC .chip').forEach(b => b.onclick = () => { cat = b.textContent; el.querySelectorAll('#gC .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-      el.querySelector('#gOk').onclick = () => {
+      ok.onclick = () => {
         const val = parseMoney(v.value);
         if (!(val > 0)) { toast('Digite um valor maior que zero'); v.focus(); return; }
-        const data = el.querySelector('#gT').value || isoDate(today());
         const desc = el.querySelector('#gD').value.trim();
+        if (forma === 'parc') {
+          const p = r2(val / n), nome = desc || (cat ? cat + ' parcelado' : 'Compra parcelada');
+          mutate(() => S.itens.push({id: uid(), nome, valor: p, de: start, n, divida: true, dia: null, custo: 'nova compra' + (cat ? ', ' + cat.toLowerCase() : ''), heat: 'mid', prio: 40}), n + 'x de ' + brl(p) + ' adicionadas');
+          closeSheet(); return;
+        }
+        const data = el.querySelector('#gT').value || isoDate(today());
         mutate(() => {
           if (edit) Object.assign(S.gastos.find(x => x.id === g.id), {valor: val, cat: cat || 'Outro', desc, data});
           else S.gastos.push({id: uid(), valor: val, cat: cat || 'Outro', desc, data, t: Date.now()});
@@ -1036,7 +1074,7 @@ function render() {
     V.innerHTML = '<div class="panel"><section class="box"><p class="empty">Carregando seus dados…</p></section></div>'; return;
   }
   const c = hojeC(), dias = Math.max(1, Math.round((cicloFim(c) - today()) / 864e5) + 1);
-  document.getElementById('sub').textContent = 'Contas de ' + cLabel(c) + ', próximo salário em ' + dias + (dias === 1 ? ' dia' : ' dias');
+  document.getElementById('sub').textContent = 'Pagamentos de ' + cLabel(c) + ', próximo salário em ' + dias + (dias === 1 ? ' dia' : ' dias');
   const html = tab === 'mes' ? viewMes() : tab === 'dividas' ? viewDividas() : tab === 'receber' ? viewReceber() : tab === 'sim' ? viewSim() : viewHoje();
   V.innerHTML = '<div class="panel">' + html + '</div>';
   bind(V);
