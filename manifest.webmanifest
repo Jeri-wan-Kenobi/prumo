@@ -1,17 +1,29 @@
 {
+  "id": "/prumo/",
   "name": "Prumo",
   "short_name": "Prumo",
-  "description": "Controle de gastos por ciclo de salário",
+  "description": "Controle de gastos por ciclo de salário: quanto posso gastar hoje, contas, parcelas e reserva.",
   "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0B1719",
-  "theme_color": "#0F5E6B",
+  "theme_color": "#0B1719",
+  "categories": ["finance", "productivity"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Lançar gasto", "short_name": "Lançar", "url": "./?acao=gasto", "icons": [{ "src": "icons/atalho-gasto.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Posso gastar isso?", "short_name": "Simular", "url": "./?acao=simular", "icons": [{ "src": "icons/atalho-simular.png", "sizes": "96x96", "type": "image/png" }] }
+  ],
+  "screenshots": [
+    { "src": "telas/hoje.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Quanto posso gastar hoje" },
+    { "src": "telas/simular.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Posso gastar isso?" },
+    { "src": "telas/dividas.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Dívidas e projeção" }
   ]
 }

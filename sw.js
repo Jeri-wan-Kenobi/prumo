@@ -1,8 +1,8 @@
 // Service worker do Prumo: deixa o app abrir mesmo sem internet.
 // Ao mudar algum arquivo do app, aumente o número da versão abaixo (v1 -> v2).
-const VERSAO = 'prumo-v4';
-const APP = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/apple-touch-icon.png'];
+const VERSAO = 'prumo-v6';
+const APP = ['./', './index.html', './firebase-config.js', './manifest.webmanifest', './privacidade.html',
+  './icons/icon-192.png', './icons/apple-touch-icon.png', './icons/atalho-gasto.png', './icons/atalho-simular.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSAO).then(c => c.addAll(APP)).then(() => self.skipWaiting()));

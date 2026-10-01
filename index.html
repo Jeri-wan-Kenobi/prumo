@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Prumo</title>
 <meta name="theme-color" content="#EEF3F2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B1719" media="(prefers-color-scheme: dark)">
@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap">
 <style>
 :root{
-  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
   color-scheme:light;
   --bg:#EEF3F2;--surface:#FFFFFF;--inset:#EEF3F2;--ink:#0E2226;--muted:#4B6265;--line:#D3DEDD;
   --action:#0F5E6B;--action-ink:#FFFFFF;--good:#1F7A5C;--warn:#8A5810;--bad:#B23B2E;
@@ -42,10 +42,27 @@
   --action:#4FB3C2;--action-ink:#0B1719;--good:#6FD0B0;--warn:#E3A94B;--bad:#FF8A7A;
   --good-soft:#17363B;--warn-soft:#33280F;--bad-soft:#3E2027;
 }
-html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg);-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y}
+/* sem zoom por toque duplo ou pinça; rolagem e toques continuam normais */
+body,button,a,input,select,textarea,label,[role=tab]{touch-action:manipulation}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+/* tela fixa como app nativo: html e body não rolam nem "quicam"; só #rolagem rola, e só na vertical */
+html,body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}
+#rolagem{position:fixed;inset:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:env(safe-area-inset-top,0px) 16px calc(100px + env(safe-area-inset-bottom,0px))}
+.sheet{overscroll-behavior:contain;touch-action:pan-y}
+/* troca de aba com deslize */
+@media (prefers-reduced-motion:no-preference){
+  #view.vem-dir{animation:vemDir .2s ease-out}#view.vem-esq{animation:vemEsq .2s ease-out}
+  @keyframes vemDir{from{transform:translateX(36px);opacity:.3}to{transform:none;opacity:1}}
+  @keyframes vemEsq{from{transform:translateX(-36px);opacity:.3}to{transform:none;opacity:1}}
+}
+/* celular deitado: o iPhone não deixa travar a rotação, então o app pede para voltar à vertical */
+#girar{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--ink);flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+#girar svg{width:56px;height:56px;color:var(--ocre)}
+@media (orientation:landscape) and (max-height:540px){#girar{display:flex}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);padding:0 16px calc(100px + env(safe-area-inset-bottom,0px));-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
 .app{max-width:640px;margin:0 auto}
 h1,h2,h3{margin:0;line-height:1.2;font-weight:600;text-wrap:balance}
 h2{font-size:1.02rem}
@@ -78,6 +95,10 @@ button,select,input{font:inherit;color:inherit}
 .sw[aria-checked="true"]{background:var(--action)}
 .sw[aria-checked="true"]::after{transform:translateX(20px)}
 .hr{height:1px;background:var(--line);margin:2px 0}
+/* o iPhone dá zoom ao focar campos com texto menor que 16px */
+input,select,textarea{font-size:max(16px,1em)}
+.verdict.mini .vn{font-size:1.5rem}
+.verdict.mini .vn .de{opacity:.6;font-weight:600}
 .login{display:flex;flex-direction:column;gap:14px;margin-top:8vh}
 .login .err{color:var(--bad);font-size:.86rem;font-weight:600}
 
@@ -147,7 +168,7 @@ button,select,input{font:inherit;color:inherit}
 .btn.ghost{background:transparent}
 .btn.danger{color:var(--bad)}
 .btn.full{width:100%}
-input[type=text],input[type=email],input[type=password],input[type=date],select{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:12px;width:100%;min-height:46px}
+input[type=text],input[type=email],input[type=password],input[type=date],select{font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:12px;width:100%;min-height:46px}
 input.money{color:var(--ink);font-size:2rem;font-weight:600;border:0;border-bottom:2px solid var(--action);border-radius:0;padding:4px 0;background:transparent;width:100%;font-variant-numeric:tabular-nums;letter-spacing:-.02em;min-height:0}
 input.money:focus{outline:none}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--muted);font-weight:500}
@@ -217,6 +238,40 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
 .sheet-in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
+/* ---------- V6 ---------- */
+.onb{display:flex;flex-direction:column;gap:18px;min-height:calc(100vh - 140px);padding-top:8px}
+.onb h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0}
+.onb .lead{font-size:.95rem;color:var(--muted);line-height:1.5;margin:0}
+.onb .grow{flex:1}
+.prog{display:flex;gap:6px}.prog i{flex:1;height:6px;border-radius:3px;background:var(--line)}.prog i.on{background:var(--ocre)}
+.daygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.daygrid .chip{min-height:52px;border-radius:12px;font-size:1rem}
+.check{display:flex;gap:12px;align-items:flex-start;font-size:.88rem;color:var(--muted);line-height:1.45}
+.check input{width:22px;height:22px;margin:0;accent-color:var(--action);flex:none}
+.mail-ic{width:88px;height:88px;border-radius:24px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--ocre)}
+.mail-ic svg{width:44px;height:44px}
+#tut{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;gap:18px;padding:calc(18px + env(safe-area-inset-top,0px)) 22px calc(22px + env(safe-area-inset-bottom,0px));overflow:auto;overscroll-behavior:none}
+#tut .ill{flex:none;min-height:250px;border-radius:24px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;padding:22px}
+#tut h1{font-size:1.45rem;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.2}
+#tut .dots{display:flex;gap:6px;justify-content:center}#tut .dots i{width:8px;height:8px;border-radius:4px;background:var(--line)}#tut .dots i.on{width:22px;background:var(--ocre)}
+.passo{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.passo .ok{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none}
+.passo.feito .ok{background:var(--good);border-color:var(--good);color:var(--surface)}.passo .ok svg{width:14px;height:14px}
+.passo .t{flex:1;font-weight:600;font-size:.92rem}.passo.feito .t{color:var(--muted);text-decoration:line-through}
+.catrow{padding:9px 0;border-top:1px solid var(--line)}.catrow:first-child{border-top:0}
+.catrow .hd{display:flex;justify-content:space-between;gap:10px;font-size:.9rem}.catrow .hd b{font-weight:600}
+.catrow .bar{height:8px}.catrow .bar i{background:var(--ocre)}
+.catrow .dl{font-size:.76rem;margin-top:3px}
+.proj{display:grid;grid-template-columns:52px minmax(0,1fr) 92px;gap:10px;align-items:center;padding:7px 0;font-size:.86rem}
+.proj .trk{height:12px;border-radius:6px;background:var(--inset);overflow:hidden}.proj .trk i{display:block;height:100%;border-radius:6px;background:var(--good)}
+.proj .trk i.neg{background:var(--bad)}.proj .v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.streak{display:flex;align-items:center;gap:12px}.streak b{font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
+.econ{padding:12px 0;border-top:1px solid var(--line)}.econ:first-child{border-top:0}
+.econ .hd{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.econ .hd b{font-weight:600}
+.econ .g{color:var(--good);font-weight:700;white-space:nowrap}
+.atualizar{position:fixed;left:16px;right:16px;top:calc(10px + env(safe-area-inset-top,0px));z-index:70;background:var(--ink);color:var(--bg);border-radius:14px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:.88rem;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.atualizar button{margin-left:auto;border:0;border-radius:10px;background:var(--ocre);color:#1A1405;font-weight:700;min-height:40px;padding:0 14px;cursor:pointer}
+.vers{text-align:center;font-size:.76rem;color:var(--muted)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:6px 6px 6px 16px;min-height:44px;border-radius:22px;font-size:.86rem;font-weight:600;z-index:50;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px)}
 .toast span{padding:4px 10px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .toast button{border:0;background:transparent;color:var(--ocre);font-weight:700;font-size:.86rem;min-height:36px;padding:0 12px;border-radius:18px;cursor:pointer}
@@ -224,6 +279,7 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
 </style>
 </head>
 <body>
+<div id="rolagem">
 <div class="app">
   <header class="top">
     <div class="brand">
@@ -238,6 +294,8 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
   </header>
   <main id="view"></main>
 </div>
+</div>
+<div id="girar" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><b>Gire o celular para a vertical</b><span class="small muted">O Prumo funciona só em pé.</span></div>
 
 <nav class="nav" id="nav" aria-label="Seções">
   <div class="nav-in" role="tablist">
@@ -249,15 +307,28 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--
   </div>
 </nav>
 <div id="layer"></div>
+<script>
+(() => {
+  // iPhone: o Safari ignora user-scalable=no; estes eventos de gesto só existem nele
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));
+  // pinça com dois dedos (iPhone e Android): cancela só quando há mais de um dedo, a rolagem segue normal
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, {passive: false});
+  // toque duplo: resolvido pelo touch-action: manipulation no CSS, sem atrasar nem bloquear toques rápidos em botões
+  // Android: guarda o pedido de instalação para o botão "Instalar o app"
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__pedidoInstalar = e; window.dispatchEvent(new Event('prumo:instalavel')); });
+})();
+</script>
 <script type="module">
 import { FIREBASE_CONFIG } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, createUserWithEmailAndPassword, sendEmailVerification, updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, doc, onSnapshot, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 (() => {
 'use strict';
 
 /* ---------- utilidades ---------- */
+const vc = (maiusc) => (S && S.nome) ? (maiusc ? 'Você' : 'você') : (maiusc ? 'O senhor' : 'o senhor');
+const topo = () => { const r = document.getElementById('rolagem'); if (r) r.scrollTop = 0; };
 const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 let HIDE = false;
 try { HIDE = localStorage.getItem('prumo:hide') === '1'; } catch (e) {}
@@ -290,6 +361,7 @@ const IC = {
 let S = null;
 let DOCREF = null, saveTimer = null, lastLocalEdit = 0;
 let USER, CLOUD_EMPTY = false, unsub = null;
+let telaAuth = 'login', PRECISA_VERIF = false, ONB = {passo: 1, salario: '', dia: 0, saldo: ''};
 let tab = 'hoje', viewCycle = null;
 let sim = null;
 
@@ -342,7 +414,8 @@ function resumo(c) {
   const compromissos = r2(itens.reduce((a, x) => a + x.v, 0));
   const pagoV = r2(itens.filter(x => pago(c, x.it.id)).reduce((a, x) => a + x.v, 0));
   const gastos = r2(gastosDo(c).reduce((a, g) => a + g.valor, 0));
-  return {semSal, salario, inicial, entradas, pendente, compromissos, pagoV, gastos};
+  const aportes = r2((S.aportes || []).filter(a => a.c === c).reduce((a, x) => a + x.v, 0));
+  return {semSal, salario, inicial, entradas, pendente, compromissos, pagoV, gastos, aportes};
 }
 // sobra acumulada ao fim do ciclo c
 function sobra(c) {
@@ -350,7 +423,7 @@ function sobra(c) {
   if (c < cur) return {carry: 0, fim: 0, r: resumo(c)};
   while (true) {
     const r = resumo(cur);
-    const fim = r2(carry + r.inicial + r.salario + r.entradas - r.compromissos - r.gastos);
+    const fim = r2(carry + r.inicial + r.salario + r.entradas - r.compromissos - r.gastos - r.aportes);
     if (cur === c) return {carry: r2(carry), fim, r};
     carry = fim; cur = ymAdd(cur, 1);
   }
@@ -359,7 +432,7 @@ function sobra(c) {
 function propria(c) {
   if (c <= hojeC()) return sobra(c).fim;
   const r = resumo(c);
-  return r2(r.inicial + r.salario + r.entradas - r.compromissos);
+  return r2(r.inicial + r.salario + r.entradas - r.compromissos - r.aportes);
 }
 function dividasInfo() {
   const lst = S.itens.filter(it => it.divida !== false).map(it => {
@@ -417,6 +490,11 @@ function migrar(d) {
     (d.entradas || []).forEach(e => { if (e.ciclo) e.ciclo = sh(e.ciclo); });
   }
   d.cicloContas = 2;
+  // V6: campos novos. Quem já usa o app não vê o tutorial.
+  if (!d.v6Desde) { d.v6Desde = isoDate(today()); if (d.tutorialVisto === undefined) d.tutorialVisto = true; }
+  d.reserva = d.reserva || {meta: 0, base: 0};
+  d.aportes = d.aportes || [];
+  d.fechados = d.fechados || {};
   return d;
 }
 
@@ -461,7 +539,7 @@ function initFirebase() {
   const fs = initializeFirestore(app, {localCache: persistentLocalCache()});
   onAuthStateChanged(AUTH, u => {
     if (unsub) { unsub(); unsub = null; }
-    USER = u || null; DOCREF = null; S = null; CLOUD_EMPTY = false; UNDO.length = 0; sim = null; tab = 'hoje';
+    USER = u || null; DOCREF = null; S = null; CLOUD_EMPTY = false; PRECISA_VERIF = false; UNDO.length = 0; sim = null; tab = 'hoje'; ONB = {passo: 1, salario: '', dia: 0, saldo: ''};
     if (!u) { setSync('Desconectado', 'err'); render(); return; }
     LS = 'prumo:cache:' + u.uid;
     try { const raw = localStorage.getItem(LS); if (raw) S = migrar(JSON.parse(raw)); } catch (e) {}
@@ -477,7 +555,7 @@ function initFirebase() {
       if (snap.exists()) {
         CLOUD_EMPTY = false;
         if (recentEdit()) return;
-        const raw = snap.data(), antigo = raw.cicloContas !== 2;
+        const raw = snap.data(), antigo = raw.cicloContas !== 2 || !raw.v6Desde;
         const data = migrar(JSON.parse(JSON.stringify(raw)));
         if (antigo) { S = data; UNDO.length = 0; save(); render(); return; } // grava a versão convertida na nuvem
         if (stable(data) === stable(S)) return;
@@ -487,7 +565,10 @@ function initFirebase() {
         // a nuvem está vazia (primeiro acesso): se houver cópia local, ela sobe; se não, tela de boas-vindas
         if (S) flush(); else { CLOUD_EMPTY = true; render(); }
       }
-    }, e => setSync('Erro de sincronização (' + (e && e.code || 'erro') + ')', 'err'));
+    }, e => {
+      if (e && e.code === 'permission-denied' && USER && !USER.emailVerified) { PRECISA_VERIF = true; render(); return; }
+      setSync('Erro de sincronização (' + (e && e.code || 'erro') + ')', 'err');
+    });
   });
 }
 
@@ -498,20 +579,64 @@ const AUTH_ERR = {
   'auth/missing-password': 'Digite a senha.',
   'auth/too-many-requests': 'Muitas tentativas. Espere alguns minutos e tente de novo.',
   'auth/network-request-failed': 'Sem internet. O primeiro login precisa de conexão.',
-  'auth/user-disabled': 'Esta conta foi desativada.'
+  'auth/user-disabled': 'Esta conta foi desativada.',
+  'auth/email-already-in-use': 'Já existe uma conta com esse e-mail. Tente entrar.',
+  'auth/weak-password': 'Senha fraca: use pelo menos 8 caracteres.',
+  'auth/wrong-password': 'Senha incorreta.',
+  'auth/requires-recent-login': 'Por segurança, digite a senha de novo.'
 };
 const BRAND = '<svg viewBox="0 0 100 100" width="64" height="64" aria-hidden="true"><rect width="100" height="100" rx="22.5" fill="#123A40"/><line x1="32" y1="17" x2="68" y2="17" stroke="#EAF1F0" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="17" x2="50" y2="44" stroke="#EAF1F0" stroke-width="4" stroke-linecap="round"/><path d="M50 42 L64 61 L50 85 L36 61 Z" fill="#E3A94B"/></svg>';
+const MAIL_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+function linkInstalar() { return podeInstalar() ? '<button class="link" type="button" id="instBtn" style="align-self:center">Instalar o app neste celular</button>' : ''; }
 function viewLogin() {
-  return '<form class="box login" id="loginF" novalidate>' + BRAND + '<h2 style="font-size:1.3rem">Entrar no Prumo</h2>' +
+  return '<form class="box login" id="loginF" novalidate>' + BRAND + '<div><h2 style="font-size:1.4rem">Prumo</h2><p class="small muted" style="margin-top:4px">A vida financeira no prumo.</p></div>' +
     '<label class="f">E-mail<input type="email" id="lE" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required></label>' +
     '<label class="f">Senha<input type="password" id="lP" autocomplete="current-password" required></label>' +
     '<p class="err" id="lErr" role="alert" hidden></p>' +
     '<button class="btn primary full" type="submit" id="lOk">Entrar</button>' +
-    '<button class="link" type="button" id="lForgot">Esqueci a senha</button></form>';
+    '<button class="link" type="button" id="lForgot" style="align-self:center">Esqueci a senha</button>' +
+    '<div class="row" style="gap:12px;color:var(--muted);font-size:.84rem;flex-wrap:nowrap"><span class="hr" style="flex:1"></span>ou<span class="hr" style="flex:1"></span></div>' +
+    '<button class="btn full" type="button" id="lNew">Criar conta grátis</button>' + linkInstalar() + '</form>';
+}
+function viewCadastro() {
+  return '<form class="box login" id="cadF" novalidate style="margin-top:2vh"><div><h2 style="font-size:1.4rem">Criar sua conta</h2><p class="small muted" style="margin-top:6px;line-height:1.45">Leva menos de um minuto. Seus dados ficam guardados só para você.</p></div>' +
+    '<label class="f">Como quer ser chamado<input type="text" id="cN" autocomplete="given-name" maxlength="30" placeholder="Ex.: Ana"></label>' +
+    '<label class="f">E-mail<input type="email" id="cE" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="voce@email.com"></label>' +
+    '<label class="f">Senha<input type="password" id="cP" autocomplete="new-password" placeholder="Mínimo de 8 caracteres"></label>' +
+    '<label class="f">Confirmar senha<input type="password" id="cP2" autocomplete="new-password" placeholder="Repita a senha"></label>' +
+    '<label class="check"><input type="checkbox" id="cOk"><span>Li e aceito a <a href="./privacidade.html" target="_blank" rel="noopener" style="color:var(--action);font-weight:600">Política de privacidade</a></span></label>' +
+    '<p class="err" id="cErr" role="alert" hidden></p>' +
+    '<button class="btn primary full" type="submit" id="cGo">Criar conta</button>' +
+    '<p class="small muted" style="text-align:center">Já tem conta? <button class="link" type="button" id="cBack" style="padding:6px;min-height:0">Entrar</button></p></form>';
 }
 function bindLogin(V) {
+  const inst = V.querySelector('#instBtn'); if (inst) inst.onclick = instalar;
+  if (telaAuth === 'cadastro') {
+    const f = V.querySelector('#cadF'), err = V.querySelector('#cErr'), go = V.querySelector('#cGo');
+    const show = t => { err.textContent = t; err.hidden = !t; };
+    V.querySelector('#cBack').onclick = () => { telaAuth = 'login'; render(); topo(); };
+    f.onsubmit = async ev => {
+      ev.preventDefault(); show('');
+      const nome = V.querySelector('#cN').value.trim(), email = V.querySelector('#cE').value.trim();
+      const p1 = V.querySelector('#cP').value, p2 = V.querySelector('#cP2').value;
+      if (!nome || !email) { show('Preencha seu nome e e-mail.'); return; }
+      if (p1.length < 8) { show('A senha precisa ter pelo menos 8 caracteres.'); return; }
+      if (p1 !== p2) { show('As senhas não são iguais.'); return; }
+      if (!V.querySelector('#cOk').checked) { show('Para continuar, aceite a Política de privacidade.'); return; }
+      go.disabled = true; go.textContent = 'Criando…';
+      try {
+        AUTH.languageCode = 'pt-BR';
+        const cred = await createUserWithEmailAndPassword(AUTH, email, p1);
+        try { await updateProfile(cred.user, {displayName: nome}); } catch (e) {}
+        try { await sendEmailVerification(cred.user); } catch (e) {}
+        telaAuth = 'login';
+      } catch (e) { show(AUTH_ERR[e && e.code] || 'Não foi possível criar a conta (' + (e && e.code || 'erro') + ').'); go.disabled = false; go.textContent = 'Criar conta'; }
+    };
+    return;
+  }
   const f = V.querySelector('#loginF'), err = V.querySelector('#lErr'), ok = V.querySelector('#lOk');
   const show = t => { err.textContent = t; err.hidden = !t; };
+  V.querySelector('#lNew').onclick = () => { telaAuth = 'cadastro'; render(); topo(); };
   f.onsubmit = async ev => {
     ev.preventDefault(); show('');
     const email = V.querySelector('#lE').value.trim(), pass = V.querySelector('#lP').value;
@@ -523,14 +648,77 @@ function bindLogin(V) {
   V.querySelector('#lForgot').onclick = async () => {
     const email = V.querySelector('#lE').value.trim();
     if (!email) { show('Digite o e-mail acima e toque de novo em "Esqueci a senha".'); return; }
-    try { await sendPasswordResetEmail(AUTH, email); } catch (e) {}
+    try { AUTH.languageCode = 'pt-BR'; await sendPasswordResetEmail(AUTH, email); } catch (e) {}
     show(''); toast('Se o e-mail estiver cadastrado, o link chega em instantes');
   };
 }
-function viewBemVindo() {
-  return '<section class="box" style="display:flex;flex-direction:column;gap:14px"><h2>Bem-vindo ao Prumo</h2>' +
-    '<p class="small muted">A nuvem ainda está vazia. Importe o backup que o senhor exportou do Prumo antigo (o arquivo prumo-backup-….json).</p>' +
-    '<button class="btn primary full" id="wImp">Importar backup</button><input type="file" id="wFile" accept="application/json,.json" hidden></section>';
+function viewConfirmar() {
+  return '<section class="onb" style="padding-top:8vh"><div class="mail-ic">' + MAIL_IC + '</div>' +
+    '<div><h1>Confirme seu e-mail</h1><p class="lead" style="margin-top:10px">Enviamos um link para <b style="color:var(--ink)">' + esc(USER.email) + '</b>. Toque nele para ativar a conta e depois volte aqui.</p></div>' +
+    '<p class="info">Não chegou? Confira a caixa de spam ou peça outro link.</p><p class="err" id="vErr" role="alert" hidden></p><div class="grow"></div>' +
+    '<button class="btn primary full" id="vOk">Já confirmei</button><button class="btn full" id="vRe">Reenviar e-mail</button>' +
+    '<button class="link" id="vOut" style="align-self:center">Usar outro e-mail</button></section>';
+}
+function bindConfirmar(V) {
+  const err = V.querySelector('#vErr'), show = t => { err.textContent = t; err.hidden = !t; };
+  V.querySelector('#vOk').onclick = async () => {
+    try { await AUTH.currentUser.reload(); } catch (e) {}
+    if (AUTH.currentUser && AUTH.currentUser.emailVerified) { try { await AUTH.currentUser.getIdToken(true); } catch (e) {} location.reload(); }
+    else show('Ainda não aparece como confirmado. Abra o link do e-mail e tente de novo.');
+  };
+  V.querySelector('#vRe').onclick = async () => { try { AUTH.languageCode = 'pt-BR'; await sendEmailVerification(AUTH.currentUser); toast('E-mail reenviado'); } catch (e) { show('Aguarde um pouco antes de pedir outro e-mail.'); } };
+  V.querySelector('#vOut').onclick = () => signOut(AUTH);
+}
+// Configuração inicial em 3 passos (conta nova, nuvem vazia)
+function viewConfig() {
+  const n = ONB.passo, prog = '<div class="prog">' + [1, 2, 3].map(i => '<i class="' + (i <= n ? 'on' : '') + '"></i>').join('') + '</div><div class="small muted">Configuração inicial · ' + n + ' de 3</div>';
+  const voltar = n > 1 ? '<button class="link" id="oBack" style="align-self:flex-start;padding:4px 0;min-height:0">‹ Voltar</button>' : '';
+  let corpo = '';
+  if (n === 1) corpo = '<div><h1>Quanto você recebe por mês?</h1><p class="lead" style="margin-top:10px">O valor líquido, que cai na conta. Se muda todo mês, use a média.</p></div>' +
+    '<input class="money" id="oV" inputmode="decimal" placeholder="R$ 0,00" value="' + esc(ONB.salario) + '" aria-label="Salário mensal">' +
+    '<button class="link" id="oBk" style="align-self:flex-start;padding:4px 0">Já tenho um backup do Prumo</button><input type="file" id="oFile" accept="application/json,.json" hidden>';
+  if (n === 2) {
+    const d = ONB.dia || 0, fixos = [5, 10, 15, 20, 24, 30];
+    corpo = '<div><h1>Em que dia o salário costuma cair?</h1><p class="lead" style="margin-top:10px">Se cai em dia útil, escolha o dia mais comum.</p></div>' +
+      '<div class="daygrid">' + fixos.map(k => '<button type="button" class="chip" data-d="' + k + '" aria-pressed="' + (k === d) + '">' + k + '</button>').join('') + '</div>' +
+      '<label class="f">Outro dia (1 a 28)<input type="text" id="oDo" inputmode="numeric" maxlength="2" value="' + (d && !fixos.includes(d) ? d : '') + '"></label>' +
+      '<div class="info" id="oCiclo"></div>';
+  }
+  if (n === 3) corpo = '<div><h1>Quanto você tem disponível hoje?</h1><p class="lead" style="margin-top:10px">É o ponto de partida. A partir daqui, o app acompanha cada gasto.</p></div>' +
+    '<input class="money" id="oV" inputmode="decimal" placeholder="R$ 0,00" value="' + esc(ONB.saldo) + '" aria-label="Saldo disponível hoje">' +
+    '<p class="info">Some o que está na conta e <b style="color:var(--ink)">tire as contas deste ciclo que ainda vão vencer</b>. Um valor aproximado já serve.</p>';
+  return '<section class="onb">' + voltar + prog + corpo + '<div class="grow"></div><p class="small muted" style="text-align:center">' +
+    (n === 1 ? 'Você pode mudar isso depois em Ajustes.' : n === 2 ? 'Se o salário atrasar ou adiantar, o app se ajusta.' : 'Pronto para começar.') + '</p>' +
+    '<p class="err" id="oErr" role="alert" hidden></p><button class="btn primary full" id="oNext">' + (n === 3 ? 'Concluir' : 'Continuar') + '</button></section>';
+}
+function bindConfig(V) {
+  const err = V.querySelector('#oErr'), show = t => { err.textContent = t; err.hidden = !t; };
+  const back = V.querySelector('#oBack'); if (back) back.onclick = () => { ONB.passo--; render(); };
+  const n = ONB.passo;
+  if (n === 1) {
+    const f = V.querySelector('#oFile'); V.querySelector('#oBk').onclick = () => f.click();
+    f.onchange = () => { if (f.files && f.files[0]) importBackup(f.files[0]); f.value = ''; };
+  }
+  if (n === 2) {
+    const info = V.querySelector('#oCiclo');
+    const pinta = () => { const d = ONB.dia; info.innerHTML = d ? '<b style="color:var(--ocre)">Seu ciclo:</b> vai do dia ' + d + ' até o dia ' + (d === 1 ? 'último' : d - 1) + ' do mês seguinte. É nesse período que o app calcula quanto você pode gastar por dia.' : 'Escolha um dia para ver como fica o seu ciclo.'; };
+    V.querySelectorAll('.daygrid .chip').forEach(b => b.onclick = () => { ONB.dia = +b.dataset.d; V.querySelector('#oDo').value = ''; V.querySelectorAll('.daygrid .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); pinta(); });
+    V.querySelector('#oDo').oninput = e => { const d = parseInt(e.target.value, 10); if (d >= 1 && d <= 28) { ONB.dia = d; V.querySelectorAll('.daygrid .chip').forEach(x => x.setAttribute('aria-pressed', false)); pinta(); } };
+    pinta();
+  }
+  const inp = V.querySelector('#oV'); if (inp) { inp.oninput = () => { if (n === 1) ONB.salario = inp.value; else ONB.saldo = inp.value; }; }
+  V.querySelector('#oNext').onclick = () => {
+    if (n === 1) { const v = parseMoney(ONB.salario); if (!(v > 0)) { show('Digite o valor do salário.'); return; } ONB.passo = 2; render(); return; }
+    if (n === 2) { const d = ONB.dia > 30 ? 30 : ONB.dia; if (!(d >= 1 && d <= 30)) { show('Escolha o dia do salário.'); return; } ONB.dia = Math.min(d, 28); ONB.passo = 3; render(); return; }
+    const saldo = parseMoney(ONB.saldo); if (!(saldo >= 0)) { show('Digite quanto você tem hoje (pode ser 0).'); return; }
+    // cria o estado zerado da conta nova
+    const dS = ONB.dia; const t0 = today();
+    const c = t0.getDate() >= dS ? t0.getFullYear() + '-' + pad(t0.getMonth() + 1) : ymAdd(t0.getFullYear() + '-' + pad(t0.getMonth() + 1), -1);
+    S = migrar({inicio: c, salario: parseMoney(ONB.salario), diaSalario: dS, semSalario: [c], saldoInicial: {[c]: saldo},
+      itens: [], gastos: [], entradas: [], pagos: {}, nome: (USER && USER.displayName) || '', cicloContas: 2,
+      v6Desde: isoDate(t0), tutorialVisto: false, novato: true});
+    CLOUD_EMPTY = false; save(); render(); topo();
+  };
 }
 
 /* ---------- toast e folha ---------- */
@@ -549,12 +737,13 @@ function toast(t, action) {
 }
 function sheet(html, onMount) {
   const L = document.getElementById('layer');
+  if (!histFolha) { histFolha = true; history.pushState({prumo: 'folha'}, ''); }
   L.innerHTML = '<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in"><div class="grab"></div>' + html + '</div></div>';
-  L.querySelector('.scrim').onclick = closeSheet;
-  L.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet);
+  L.querySelector('.scrim').onclick = () => closeSheet();
+  L.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeSheet());
   if (onMount) onMount(L.querySelector('.sheet'));
 }
-function closeSheet() { document.getElementById('layer').innerHTML = ''; }
+function closeSheet(doVoltar) { document.getElementById('layer').innerHTML = ''; if (histFolha && !doVoltar) { histFolha = false; voltarHist(); } }
 
 /* ---------- dicas ---------- */
 function dicas(c) {
@@ -609,7 +798,7 @@ function dicas(c) {
   if (temSaldo && r.gastos > 0 && decorridos >= 3 && livre > 0 && ritmo * restantes < livre * 0.7) {
     const folga = r2(livre - ritmo * restantes);
     out.push({id: 'ritmo-bom', kind: 'pos', icon: IC.bulb, t: 'Ritmo bom',
-      x: 'O senhor está gastando ' + brl(r2(ritmo)) + ' por dia. Mantendo assim, sobram cerca de ' + brl(folga) + ' para o próximo ciclo.'});
+      x: vc(true) + ' está gastando ' + brl(r2(ritmo)) + ' por dia. Mantendo assim, sobram cerca de ' + brl(folga) + ' para o próximo ciclo.'});
   }
   // 8. marco
   const di = dividasInfo();
@@ -618,6 +807,11 @@ function dicas(c) {
     [0.75, 0.5, 0.25].some(m => { if (pct >= m) { out.push({id: 'marco-' + m, kind: 'pos', icon: IC.star, t: Math.round(m * 100) + '% das dívidas pagas',
       x: 'Faltam ' + brl(di.total) + '. Livre de dívidas em ' + cLabel(di.livreEm) + ', se nada novo entrar.'}); return true; } return false; });
   }
+  // 9. lembrete de backup
+  const lb = lastBackup(), desde = lb ? new Date(lb) : new Date((S.v6Desde || isoDate(t)) + 'T00:00:00');
+  const diasBk = Math.floor((t - new Date(desde.getFullYear(), desde.getMonth(), desde.getDate())) / 864e5);
+  if (diasBk >= 7) out.push({id: 'backup-' + isoDate(t), kind: 'urg', icon: IC.inbox, t: lb ? 'Faz ' + diasBk + ' dias sem backup' : 'Faça seu primeiro backup',
+    x: 'Em Ajustes › Exportar backup. Leva poucos segundos e protege seus dados.'});
   const disp = (S.dispensadas && S.dispensadas[c]) || [];
   return out.filter(d => !disp.includes(d.id));
 }
@@ -651,7 +845,7 @@ function viewHoje() {
   let h = '';
 
   if (r.semSal && !(S.saldoInicial && c in S.saldoInicial)) {
-    h += '<section class="box"><h2>Quanto o senhor tem disponível hoje até o salário de ' + ddmm(prox) + '?</h2>' +
+    h += '<section class="box"><h2>Quanto ' + vc() + ' tem disponível hoje até o salário de ' + ddmm(prox) + '?</h2>' +
       '<p class="small muted" style="margin:6px 0 10px">Some o que está na conta, já descontando as contas que ainda faltam pagar neste ciclo. Os compromissos dos próximos ciclos já estão cadastrados.</p>' +
       '<input class="money" id="iniVal" inputmode="decimal" placeholder="R$ 0,00" aria-label="Saldo disponível"><button class="btn primary full" style="margin-top:14px" id="iniOk">Salvar saldo</button></section>';
   } else {
@@ -665,7 +859,9 @@ function viewHoje() {
       '<p class="cap">' + (neg ? 'Gasto no ciclo: ' + brl(r.gastos) : on + ' de 10 partes disponíveis. Gasto no ciclo: ' + brl(r.gastos)) + '</p></section>';
   }
 
-  const ds = dicas(c);
+  h += cardFechamento();
+  h += cardPassos();
+  const ds = S.novato && passosEstado().some(p => !p.ok) ? [] : dicas(c);
   if (ds.length) {
     const d = ds[0];
     h += '<section class="box tip ' + d.kind + '"><div class="ic" style="color:var(--' + (d.kind === 'pos' ? 'good' : d.kind === 'bad' ? 'bad' : 'warn') + ')">' + d.icon + '</div>' +
@@ -673,7 +869,8 @@ function viewHoje() {
       '<button class="x" data-dismiss="' + esc(d.id) + '" aria-label="Dispensar dica">×</button></section>';
   }
 
-  h += '<button class="box simcta" id="openSim" type="button"><span class="ic">' + IC.calc + '</span><span class="tx"><b>Antes de comprar</b><span class="sb">Simule uma compra antes de parcelar</span></span><span class="chev" aria-hidden="true">›</span></button>';
+  h += '<button class="box simcta" id="openSim" type="button"><span class="ic">' + IC.calc + '</span><span class="tx"><b>Posso gastar isso?</b><span class="sb">Simule um gasto à vista ou parcelado antes de comprar</span></span><span class="chev" aria-hidden="true">›</span></button>';
+  h += cardReserva();
 
   const lista = [];
   [c, ymAdd(c, 1)].forEach(cc => itensDo(cc).forEach(x => { if (!pago(cc, x.it.id)) lista.push({x, c: cc, d: vencData(x.it, cc)}); }));
@@ -711,7 +908,9 @@ function viewMes() {
   if (r.inicial) h += '<li class="it plain"><div><div class="nm" data-ini="' + c + '">Saldo disponível informado</div></div><div class="v">' + brl(r.inicial) + '</div></li>';
   if (r.salario) h += '<li class="it plain"><div><div class="nm" id="salEdit">Salário</div><div class="mt">por volta do dia ' + dia() + '</div></div><div class="v">' + brl(r.salario) + '</div></li>';
   entradasDo(c).forEach(e => h += entradaRow(e));
+  if (r.aportes) h += '<li class="it plain"><div><div class="nm">' + (r.aportes > 0 ? 'Guardado na reserva' : 'Retirado da reserva') + '</div></div><div class="v">' + brl(-r.aportes) + '</div></li>';
   h += '</ul></section>';
+  h += cardCategorias(c);
 
   const gs = gastosDo(c).slice().sort((a, b) => b.data.localeCompare(a.data));
   h += '<section class="box"><h2>Gastos lançados</h2>' + (gs.length ? '<ul class="list">' + gs.map(gastoRow).join('') + '</ul>' : '<p class="empty">Nenhum gasto neste ciclo.</p>') + '</section>';
@@ -731,7 +930,9 @@ function viewDividas() {
   let h = '<section class="hero"><p class="lbl">Ainda a pagar</p><p class="big">' + brl(di.total) + '</p>' +
     '<p class="ctx">' + (di.livreEm ? 'Livre de dívidas em <b>' + cLabel(di.livreEm) + '</b>, se nada novo entrar.' : 'Nenhuma dívida ativa.') + '</p>' +
     '<div class="segs" aria-hidden="true">' + segs(Math.round(pct / 10)) + '</div><p class="cap">' + pct + '% do total já pago</p></section>';
-  h += '<button class="box simcta" id="openSim" type="button"><span class="ic">' + IC.calc + '</span><span class="tx"><b>Antes de comprar</b><span class="sb">Veja o efeito de uma nova parcela</span></span><span class="chev" aria-hidden="true">›</span></button>';
+  h += '<button class="box simcta" id="openSim" type="button"><span class="ic">' + IC.calc + '</span><span class="tx"><b>Posso gastar isso?</b><span class="sb">Veja o efeito de uma compra antes de fazer</span></span><span class="chev" aria-hidden="true">›</span></button>';
+  h += cardContador();
+  if (di.ativas.length) h += '<button class="box simcta" id="extraBtn" type="button"><span class="ic">' + IC.bulb + '</span><span class="tx"><b>Tenho um dinheiro extra</b><span class="sb">Veja qual dívida antecipar para economizar mais juros</span></span><span class="chev" aria-hidden="true">›</span></button>';
   h += '<section class="box"><h2>Por ordem de custo</h2><p class="small muted" style="margin-top:4px">As primeiras são as mais caras. Dinheiro extra vai primeiro para elas.</p><div style="margin-top:10px">';
   ativas.forEach(d => {
     const n = d.cs.length, pg = n - d.pend.length;
@@ -744,13 +945,14 @@ function viewDividas() {
   });
   if (!ativas.length) h += '<p class="empty">Nenhuma dívida ativa.</p>';
   h += '</div></section><p class="info">Contas fixas, como a internet, não entram neste total.</p>';
+  h += cardProjecao();
   return h;
 }
 
 function viewReceber() {
   const ents = S.entradas.slice().sort((a, b) => (a.recebido - b.recebido) || a.ciclo.localeCompare(b.ciclo));
   const pend = r2(ents.filter(e => !e.recebido && e.tipo !== 'resgate').reduce((a, e) => a + e.valor, 0));
-  let h = '<section class="hero"><p class="lbl">A receber de outras pessoas</p><p class="big">' + brl(pend) + '</p><p class="ctx">Só entra na conta do mês quando o senhor marcar como recebido.</p></section>';
+  let h = '<section class="hero"><p class="lbl">A receber de outras pessoas</p><p class="big">' + brl(pend) + '</p><p class="ctx">Só entra na conta do mês quando ' + vc() + ' marcar como recebido.</p></section>';
   h += '<section class="box"><h2>Valores</h2>' + (ents.length ? '<ul class="list">' + ents.map(e => entradaRow(e, true)).join('') + '</ul>' : '<p class="empty">Nada a receber.</p>') +
     '<button class="btn full" style="margin-top:10px" id="newEnt">Adicionar valor a receber</button></section>';
   return h;
@@ -820,12 +1022,12 @@ function simOut() {
     '<label class="f">Nome da compra (para adicionar)<input type="text" id="sNome" maxlength="40" placeholder="Ex.: pedaleira" value="' + esc(sim.nome) + '"></label>' +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" style="flex:1" id="simLater">Deixar para depois</button><button class="btn" style="flex:1" id="simAdd">Adicionar mesmo assim</button></div>';
   document.getElementById('sNome').oninput = e => { sim.nome = e.target.value; };
-  document.getElementById('simLater').onclick = () => { sim = null; tab = 'hoje'; render(); window.scrollTo(0, 0); toast('Boa decisão. A compra pode esperar.'); };
+  document.getElementById('simLater').onclick = () => { sim = null; tab = 'hoje'; render(); topo(); toast('Boa decisão. A compra pode esperar.'); };
   document.getElementById('simAdd').onclick = () => {
     if (!confirm('Adicionar ' + sim.n + 'x de ' + brl(res.parc) + ' aos compromissos?')) return;
     const nome = (sim.nome || '').trim() || 'Compra parcelada';
-    mutate(() => S.itens.push({id: uid(), nome, valor: res.parc, de: sim.start, n: sim.n, divida: true, dia: null, custo: 'nova compra', heat: 'mid', prio: 40}), 'Compra adicionada');
-    sim = null; tab = 'dividas'; render(); window.scrollTo(0, 0);
+    mutate(() => { registrarCredito(); S.itens.push({id: uid(), nome, valor: res.parc, de: sim.start, n: sim.n, divida: true, dia: null, custo: 'nova compra', heat: 'mid', prio: 40, criado: Date.now()}); }, 'Compra adicionada');
+    sim = null; tab = 'dividas'; render(); topo();
   };
 }
 function bindSim(V) {
@@ -833,7 +1035,7 @@ function bindSim(V) {
   v.oninput = () => { sim.valor = v.value; simOut(); };
   V.querySelectorAll('#sN .chip').forEach(b => b.onclick = () => { sim.n = +b.dataset.n; V.querySelectorAll('#sN .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); simOut(); });
   V.querySelector('#sC').onchange = e => { sim.start = e.target.value; simOut(); };
-  V.querySelector('#simBack').onclick = () => { tab = 'hoje'; render(); window.scrollTo(0, 0); };
+  V.querySelector('#simBack').onclick = () => { tab = 'hoje'; render(); topo(); };
   simOut();
   if (!sim.valor) setTimeout(() => v.focus(), 80);
 }
@@ -841,12 +1043,30 @@ function bindSim(V) {
 /* ---------- formulários ---------- */
 const CATS = ['Gasolina', 'Comida', 'Lanche', 'Celular', 'Lazer', 'Moto', 'Outro'];
 const NPARC = [2, 3, 4, 5, 6, 8, 10, 12];
-function sheetGasto(g) {
-  const edit = !!g; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
+// Efeito de um gasto à vista hoje no "Posso gastar hoje" e no livre do ciclo
+function impactoVista(val) {
+  const c = hojeC(), s = sobra(c), r = s.r;
+  if (r.semSal && !(S.saldoInicial && c in S.saldoInicial)) return '<p class="info">Informe o saldo disponível na tela Hoje para ver o impacto dos gastos.</p>';
+  const dias = Math.max(1, Math.round((cicloFim(c) - today()) / 864e5) + 1);
+  const livre = s.fim, porDia = livre > 0 ? r2(livre / dias) : 0;
+  const livre2 = r2(livre - val), porDia2 = livre2 > 0 ? r2(livre2 / dias) : 0;
+  let nv, tit, txt;
+  if (livre2 < 0) { nv = 'nc'; tit = 'Não cabe no ciclo'; txt = 'O ciclo ficaria negativo em ' + brl(-livre2) + ' até o salário de ' + ddmm(cicloInicio(ymAdd(c, 1))) + '.'; }
+  else if (val <= porDia) { nv = 'tr'; tit = 'Cabe no limite de hoje'; txt = 'Ainda sobram ' + brl(r2(porDia - val)) + ' do limite de hoje.'; }
+  else if (porDia2 >= porDia * 0.8) { nv = 'at'; tit = 'Passa do limite de hoje'; txt = 'Passa ' + brl(r2(val - porDia)) + ' do limite de hoje, mas os próximos dias quase não mudam.'; }
+  else { nv = 'arr'; tit = 'Aperta os próximos dias'; txt = 'Passa ' + brl(r2(val - porDia)) + ' do limite de hoje e reduz o que sobra para cada dia até o salário.'; }
+  return '<section class="verdict mini ' + nv + '" aria-live="polite"><div class="lv">' + tit + '</div>' +
+    '<div class="lb">Posso gastar por dia</div><div class="vn"><span class="de">' + brl(porDia) + ' →</span> ' + brl(porDia2) + '</div>' +
+    '<div class="vt">' + esc(txt) + ' Livre no ciclo: ' + brl(livre) + ' → ' + brl(livre2) + '.</div></section>';
+}
+function sheetGasto(g, modo) {
+  const edit = !!g, simular = modo === 'simular'; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
   const c = hojeC();
   const opts = Array.from({length: 4}, (_, k) => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === ymAdd(c, 1) ? ' selected' : '') + '>' + cLabel(k) + (k === c ? ' (atual)' : '') + '</option>').join('');
-  sheet('<h2>' + (edit ? 'Editar gasto' : 'Novo gasto') + '</h2>' +
+  sheet('<h2>' + (edit ? 'Editar gasto' : simular ? 'Posso gastar isso?' : 'Novo gasto') + '</h2>' +
+    (simular ? '<p class="small muted" style="margin-top:-6px">Digite o valor e veja o efeito. Nada é lançado até ' + vc() + ' confirmar.</p>' : '') +
     '<input class="money" id="gV" inputmode="decimal" placeholder="R$ 0,00" value="' + (edit ? String(g.valor).replace('.', ',') : '') + '" aria-label="Valor">' +
+    (edit ? '' : '<div id="gImp"></div>') +
     (edit ? '' : '<div class="chips" id="gF" role="group" aria-label="Forma de pagamento"><button class="chip" type="button" data-f="vista" aria-pressed="true">À vista</button><button class="chip" type="button" data-f="parc" aria-pressed="false">Parcelado</button></div>') +
     '<div id="gParc" hidden style="display:flex;flex-direction:column;gap:12px">' +
       '<p class="small muted" id="gParcInfo">Digite o valor <b>total</b> da compra. As parcelas entram nos compromissos, não nos gastos de hoje.</p>' +
@@ -854,36 +1074,43 @@ function sheetGasto(g) {
       '<label class="f">Primeira parcela paga em<select id="gS">' + opts + '</select></label>' +
       '<div id="gOut" style="display:flex;flex-direction:column;gap:12px"></div>' +
     '</div>' +
+    (edit ? '' : (() => { const fs = favoritos(); return fs.length ? '<div class="f" id="gFavW" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Seus frequentes<div class="chips" id="gFav">' + fs.map((f, i) => '<button type="button" class="chip" data-fav="' + i + '">' + esc(f.desc || f.cat) + ' · ' + brl(f.valor) + '</button>').join('') + '</div></div>' : ''; })()) +
     '<div class="chips" id="gC">' + CATS.map(k => '<button class="chip" type="button" aria-pressed="' + (g.cat === k) + '">' + k + '</button>').join('') + '</div>' +
     '<label class="f"><span id="gDl">Descrição (opcional)</span><input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60"></label>' +
     '<label class="f" id="gTl">Data<input type="date" id="gT" value="' + g.data + '"></label>' +
-    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gOk" style="flex:1">' + (edit ? 'Salvar gasto' : 'Lançar gasto') + '</button>' + (edit ? '<button class="btn danger" id="gDel">Apagar</button>' : '<button class="btn ghost" data-close>Cancelar</button>') + '</div>',
+    (simular
+      ? '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gLater" style="flex:1">Deixar para depois</button><button class="btn" id="gOk" style="flex:1">Lançar gasto</button></div>'
+      : '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gOk" style="flex:1">' + (edit ? 'Salvar gasto' : 'Lançar gasto') + '</button>' + (edit ? '<button class="btn danger" id="gDel">Apagar</button>' : '<button class="btn ghost" data-close>Cancelar</button>') + '</div>'),
     el => {
       let cat = g.cat || '', forma = 'vista', n = 3, start = ymAdd(c, 1);
       const v = el.querySelector('#gV'); setTimeout(() => v.focus(), 60);
-      const parc = el.querySelector('#gParc'), out = el.querySelector('#gOut'), ok = el.querySelector('#gOk');
+      const parc = el.querySelector('#gParc'), out = el.querySelector('#gOut'), ok = el.querySelector('#gOk'), imp = el.querySelector('#gImp');
       const atualizar = () => {
-        const isP = forma === 'parc';
+        const isP = forma === 'parc', val = parseMoney(v.value);
         parc.hidden = !isP;
         el.querySelector('#gTl').hidden = isP;
         el.querySelector('#gDl').textContent = isP ? 'Nome da compra' : 'Descrição (opcional)';
         ok.textContent = isP ? 'Adicionar parcelas' : (edit ? 'Salvar gasto' : 'Lançar gasto');
-        if (!isP) return;
-        const val = parseMoney(v.value);
-        out.innerHTML = val > 0 ? veredito(val, n, start, 'gasto').html : '<p class="info">Digite o valor total para ver o efeito nos próximos meses.</p>';
+        if (imp) imp.innerHTML = !isP && val > 0 ? impactoVista(val) : '';
+        if (isP) out.innerHTML = val > 0 ? veredito(val, n, start, simular ? 'sim' : 'gasto').html : '<p class="info">Digite o valor total para ver o efeito nos próximos meses.</p>';
       };
-      v.addEventListener('input', () => { if (forma === 'parc') atualizar(); });
+      v.addEventListener('input', atualizar);
+      const later = el.querySelector('#gLater');
+      if (later) later.onclick = () => { closeSheet(); toast('Boa decisão. A compra pode esperar.'); };
       el.querySelectorAll('#gF .chip').forEach(b => b.onclick = () => { forma = b.dataset.f; el.querySelectorAll('#gF .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); atualizar(); });
       el.querySelectorAll('#gN .chip').forEach(b => b.onclick = () => { n = +b.dataset.n; el.querySelectorAll('#gN .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); atualizar(); });
       el.querySelector('#gS').onchange = e => { start = e.target.value; atualizar(); };
       el.querySelectorAll('#gC .chip').forEach(b => b.onclick = () => { cat = b.textContent; el.querySelectorAll('#gC .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+      const favs = favoritos();
+      el.querySelectorAll('#gFav .chip').forEach(b => b.onclick = () => { const f = favs[+b.dataset.fav]; v.value = String(f.valor).replace('.', ','); el.querySelector('#gD').value = f.desc;
+        cat = f.cat; el.querySelectorAll('#gC .chip').forEach(x => x.setAttribute('aria-pressed', x.textContent === f.cat)); atualizar(); });
       ok.onclick = () => {
         const val = parseMoney(v.value);
         if (!(val > 0)) { toast('Digite um valor maior que zero'); v.focus(); return; }
         const desc = el.querySelector('#gD').value.trim();
         if (forma === 'parc') {
           const p = r2(val / n), nome = desc || (cat ? cat + ' parcelado' : 'Compra parcelada');
-          mutate(() => S.itens.push({id: uid(), nome, valor: p, de: start, n, divida: true, dia: null, custo: 'nova compra' + (cat ? ', ' + cat.toLowerCase() : ''), heat: 'mid', prio: 40}), n + 'x de ' + brl(p) + ' adicionadas');
+          mutate(() => { registrarCredito(); S.itens.push({id: uid(), nome, valor: p, de: start, n, divida: true, dia: null, custo: 'nova compra' + (cat ? ', ' + cat.toLowerCase() : ''), heat: 'mid', prio: 40, criado: Date.now()}); }, n + 'x de ' + brl(p) + ' adicionadas');
           closeSheet(); return;
         }
         const data = el.querySelector('#gT').value || isoDate(today());
@@ -903,12 +1130,14 @@ function sheetItem(id, c) {
   sheet('<h2>' + esc(it.nome) + '</h2><p class="small muted">' + esc(it.custo || '') + '</p>' +
     '<label class="f">Valor em ' + cLabel(c) + '<input type="text" id="iV" inputmode="decimal" value="' + (v != null ? String(v).replace('.', ',') : '') + '"></label>' +
     '<label class="f">Dia de vencimento (vazio se não souber)<input type="text" id="iD" inputmode="numeric" value="' + (it.dia || '') + '"></label>' +
+    (it.divida !== false ? '<label class="f">Juros ao mês, em % (vazio se não tiver)<input type="text" id="iJ" inputmode="decimal" value="' + (jurosDe(it) != null ? String(jurosDe(it)).replace('.', ',') : '') + '"></label>' : '') +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="iOk" style="flex:1">Salvar</button><button class="btn danger" id="iDel">Excluir</button></div>',
     el => {
       el.querySelector('#iOk').onclick = () => {
         const nv = parseMoney(el.querySelector('#iV').value), nd = parseInt(el.querySelector('#iD').value, 10);
         if (!(nv >= 0)) { toast('Valor inválido'); return; }
-        mutate(() => { if (nv !== v) it.sched = Object.assign({}, it.sched || {}, {[c]: nv}); it.dia = nd >= 1 && nd <= 31 ? nd : null; }, 'Compromisso salvo');
+        const jEl = el.querySelector('#iJ'), nj = jEl ? parseFloat(jEl.value.replace(',', '.')) : NaN;
+        mutate(() => { if (nv !== v) it.sched = Object.assign({}, it.sched || {}, {[c]: nv}); it.dia = nd >= 1 && nd <= 31 ? nd : null; if (jEl) it.juros = nj >= 0 ? nj : null; }, 'Compromisso salvo');
         closeSheet();
       };
       el.querySelector('#iDel').onclick = () => {
@@ -917,23 +1146,34 @@ function sheetItem(id, c) {
       };
     });
 }
-function sheetNovoItem() {
+function sheetNovoItem(tipoIni) {
   const c = viewCycle || hojeC();
-  const opts = [0, 1, 2, 3].map(k => ymAdd(c, k)).map(k => '<option value="' + k + '">' + cLabel(k) + '</option>').join('');
-  sheet('<h2>Novo compromisso</h2><p class="note">Vai parcelar uma compra? Use antes o "Antes de comprar" para ver o efeito nos próximos meses.</p>' +
-    '<label class="f">Nome<input type="text" id="nN" maxlength="40"></label>' +
-    '<label class="f">Valor da parcela<input type="text" id="nV" inputmode="decimal"></label>' +
-    '<label class="f">Número de parcelas (vazio para conta fixa todo mês)<input type="text" id="nP" inputmode="numeric"></label>' +
-    '<label class="f">Primeiro ciclo<select id="nC">' + opts + '</select></label>' +
-    '<label class="f">Dia de vencimento (opcional)<input type="text" id="nD" inputmode="numeric"></label>' +
+  let tipo = tipoIni === 'parc' ? 'parc' : 'fixa';
+  // conta nova: o saldo informado já desconta as contas deste ciclo, então o padrão é começar no próximo
+  const padrao = S.novato && c === hojeC() ? ymAdd(c, 1) : c;
+  const opts = [0, 1, 2, 3].map(k => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === padrao ? ' selected' : '') + '>' + cLabel(k) + (k === hojeC() ? ' (este ciclo)' : '') + '</option>').join('');
+  sheet('<h2>Nova conta ou parcela</h2>' + (S.novato ? '<p class="info"><b style="color:var(--ocre)">Dica:</b> comece pelas contas que se repetem todo mês, como internet, celular e academia.</p>' : '') +
+    '<div class="chips" id="nT" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" class="chip" data-t="fixa" aria-pressed="' + (tipo === 'fixa') + '">Conta fixa</button><button type="button" class="chip" data-t="parc" aria-pressed="' + (tipo === 'parc') + '">Parcelada</button></div>' +
+    '<label class="f">Nome<input type="text" id="nN" maxlength="40" placeholder="Ex.: Internet"></label>' +
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f" id="nVl">Valor por mês<input type="text" id="nV" inputmode="decimal" placeholder="R$ 0,00"></label><label class="f">Vence no dia<input type="text" id="nD" inputmode="numeric" placeholder="Ex.: 15"></label></div>' +
+    '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" placeholder="Opcional"></label></div>' +
+    '<p class="small muted">Vai parcelar uma compra nova? Use antes o "Posso gastar isso?".</p></div>' +
+    '<label class="f">Primeiro pagamento em<select id="nC">' + opts + '</select></label>' +
+    (S.novato ? '<p class="small muted">As contas deste ciclo já saíram do saldo que você informou, por isso o padrão é o próximo ciclo.</p>' : '') +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="nOk" style="flex:1">Adicionar</button><button class="btn ghost" data-close>Cancelar</button></div>',
     el => {
+      const pinta = () => { el.querySelector('#nParc').hidden = tipo !== 'parc'; el.querySelector('#nVl').firstChild.textContent = tipo === 'parc' ? 'Valor da parcela' : 'Valor por mês'; el.querySelector('#nOk').textContent = tipo === 'parc' ? 'Adicionar parcelas' : 'Adicionar conta'; };
+      el.querySelectorAll('#nT .chip').forEach(b => b.onclick = () => { tipo = b.dataset.t; el.querySelectorAll('#nT .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); pinta(); });
+      pinta();
       el.querySelector('#nOk').onclick = () => {
         const nome = el.querySelector('#nN').value.trim(), v = parseMoney(el.querySelector('#nV').value);
-        const p = parseInt(el.querySelector('#nP').value, 10), d = parseInt(el.querySelector('#nD').value, 10);
+        const p = parseInt(el.querySelector('#nP').value, 10), d = parseInt(el.querySelector('#nD').value, 10), j = parseFloat(el.querySelector('#nJ').value.replace(',', '.'));
         if (!nome || !(v > 0)) { toast('Preencha nome e valor'); return; }
-        mutate(() => S.itens.push({id: uid(), nome, valor: v, de: el.querySelector('#nC').value, n: p > 0 ? p : null, rec: !(p > 0), divida: p > 0, dia: d >= 1 && d <= 31 ? d : null, custo: p > 0 ? 'novo' : 'conta fixa', prio: 40}), 'Compromisso adicionado');
+        if (tipo === 'parc' && !(p > 0)) { toast('Informe quantas parcelas faltam'); return; }
+        const parc = tipo === 'parc';
         closeSheet();
+        mutate(() => { if (parc) registrarCredito(); S.itens.push({id: uid(), nome, valor: v, de: el.querySelector('#nC').value, n: parc ? p : null, rec: !parc, divida: parc, dia: d >= 1 && d <= 31 ? d : null, custo: parc ? (j > 0 ? String(j).replace('.', ',') + '% ao mês' : 'parcelado') : 'conta fixa', juros: parc && j >= 0 ? j : null, prio: 40, criado: parc ? Date.now() : undefined}); },
+          parc ? 'Parcelas adicionadas' : 'Conta adicionada');
       };
     });
 }
@@ -1024,7 +1264,9 @@ function importBackup(file) {
 function sheetAjustes() {
   const m = themeMode();
   const th = [['auto', 'Auto'], ['light', 'Claro'], ['dark', 'Escuro']];
+  const linha = (id, t, sub, cls) => '<button type="button" class="setrow" id="' + id + '" style="width:100%;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;padding:12px 0;min-height:52px"><span class="tx"><b' + (cls ? ' class="' + cls + '"' : '') + '>' + t + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</span><span class="muted" aria-hidden="true">›</span></button>';
   sheet('<h2>Ajustes</h2>' +
+    '<div class="set"><h3>Seus números</h3>' + linha('aSal', 'Salário e dia do pagamento', brl(S.salario) + ', todo dia ' + dia()) + linha('aRes', 'Reserva', 'Guardado: ' + brl(guardadoReserva())) + '</div>' +
     '<div class="set"><h3>Exibição</h3>' +
     '<div class="setrow"><div class="tx"><b>Ocultar valores</b><span>Troca os valores por R$ •••. Também pelo olho no topo.</span></div><button class="sw" id="swHide" role="switch" aria-checked="' + HIDE + '" aria-label="Ocultar valores"></button></div>' +
     '<div class="setrow"><div class="tx"><b>Tema</b></div><div class="chips" id="thC">' + th.map(([k, l]) => '<button type="button" class="chip" data-th="' + k + '" aria-pressed="' + (k === m) + '">' + l + '</button>').join('') + '</div></div></div>' +
@@ -1034,9 +1276,10 @@ function sheetAjustes() {
     '<button class="btn full" id="bkImp">Importar backup</button>' +
     '<input type="file" id="bkFile" accept="application/json,.json" hidden>' +
     '<p class="info">O backup é um arquivo .json com todos os seus dados. Guarde num lugar só seu: ele mostra valores, dívidas e nomes. Faça um por semana e antes de qualquer mudança grande.</p></div>' +
-    '<div class="hr"></div>' +
-    '<div class="set"><h3>Conta</h3><p class="small muted">' + esc(USER && USER.email || '') + '</p><button class="btn danger full" id="logout">Sair desta conta</button></div>' +
-    '<button class="btn ghost full" data-close>Fechar</button>',
+    '<div class="set"><h3>Ajuda</h3>' + (podeInstalar() ? linha('aInst', 'Instalar o app neste celular', IOS ? 'Pelo Safari, em poucos passos' : 'Tela cheia e ícone na tela inicial') : '') +
+    linha('aTut', 'Ver o tutorial de novo') + '<a class="setrow" href="./privacidade.html" target="_blank" rel="noopener" style="border-top:1px solid var(--line);padding:12px 0;min-height:52px;text-decoration:none;color:inherit"><span class="tx"><b>Política de privacidade</b></span><span class="muted" aria-hidden="true">›</span></a></div>' +
+    '<div class="set"><h3>Conta</h3>' + linha('logout', 'Sair desta conta', esc(USER && USER.email || '')) + linha('aDel', 'Excluir minha conta', 'Apaga todos os dados de forma permanente', 'bad') + '</div>' +
+    '<button class="btn ghost full" data-close>Fechar</button><p class="vers">Prumo v' + VERSAO_APP + '</p>',
     el => {
       const sw = el.querySelector('#swHide');
       sw.onclick = () => { setHide(!HIDE); sw.setAttribute('aria-checked', HIDE); };
@@ -1045,10 +1288,282 @@ function sheetAjustes() {
       const f = el.querySelector('#bkFile');
       el.querySelector('#bkImp').onclick = () => f.click();
       f.onchange = () => { if (f.files && f.files[0]) importBackup(f.files[0]); f.value = ''; };
+      el.querySelector('#aSal').onclick = sheetSalario;
+      el.querySelector('#aRes').onclick = sheetReserva;
+      const ins = el.querySelector('#aInst'); if (ins) ins.onclick = instalar;
+      el.querySelector('#aTut').onclick = () => { closeSheet(); setTimeout(abrirTutorial, 60); };
+      el.querySelector('#aDel').onclick = sheetExcluirConta;
       el.querySelector('#logout').onclick = async () => {
         if (!confirm('Sair desta conta? Os dados continuam na nuvem.')) return;
         try { localStorage.removeItem(LS); } catch (e) {}
         closeSheet(); await signOut(AUTH);
+      };
+    });
+}
+
+/* ================= V6 ================= */
+const VERSAO_APP = '6.0';
+// ---------- instalação (Android) e instruções (iPhone)
+const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const podeInstalar = () => !STANDALONE && (!!window.__pedidoInstalar || IOS);
+window.addEventListener('prumo:instalavel', () => { if (!S) render(); });
+window.addEventListener('appinstalled', () => { window.__pedidoInstalar = null; toast('Prumo instalado'); });
+async function instalar() {
+  const p = window.__pedidoInstalar;
+  if (p) { p.prompt(); try { await p.userChoice; } catch (e) {} window.__pedidoInstalar = null; render(); return; }
+  sheet('<h2>Instalar no iPhone</h2><ol class="small" style="margin:0;padding-left:20px;line-height:1.9">' +
+    '<li>Abra este endereço no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (quadrado com seta).</li>' +
+    '<li>Escolha <b>Adicionar à Tela de Início</b>.</li><li>Deixe <b>Abrir como App Web</b> ligado e toque em <b>Adicionar</b>.</li></ol>' +
+    '<button class="btn primary full" data-close>Entendi</button>');
+}
+
+// ---------- botão "voltar" do Android: fecha a folha ou volta para Hoje
+let histFolha = false, histAba = false, ignorarPop = 0;
+function voltarHist() { ignorarPop++; history.back(); }
+window.addEventListener('popstate', () => {
+  if (ignorarPop) { ignorarPop--; return; }
+  if (document.getElementById('tut')) { fecharTutorial(); return; }
+  if (document.querySelector('#layer .sheet')) { histFolha = false; closeSheet(true); return; }
+  if (histAba) { histAba = false; irAba('hoje', true); }
+});
+
+// ---------- aviso de nova versão
+if ('serviceWorker' in navigator) {
+  const tinha = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!tinha || document.querySelector('.atualizar')) return;
+    const b = document.createElement('div'); b.className = 'atualizar'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span>Nova versão do Prumo disponível</span><button type="button">Atualizar</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+  });
+}
+
+// ---------- tutorial (5 telas)
+const TUT = [
+  {t: 'Quanto posso gastar hoje', x: 'O número grande é o que você pode gastar por dia até o próximo salário, já descontando contas e gastos. Ele se atualiza a cada lançamento.',
+   il: () => '<div class="hero" style="width:100%"><p class="lbl">Posso gastar hoje</p><p class="big" style="font-size:2.4rem">R$ 27,83<small>por dia</small></p><p class="ctx">Livre no ciclo: <b>R$ 640,00</b></p><div class="segs">' + segs(10) + '</div></div>'},
+  {t: 'Lance na hora, em segundos', x: 'Toque no + sempre que gastar: valor, categoria e pronto. Dá para lançar à vista ou parcelado.',
+   il: () => '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;width:100%"><div class="box" style="width:100%;display:flex;justify-content:space-between"><div><b>Lanche, café</b><div class="small muted">hoje</div></div><b>R$ 15,00</b></div><span style="width:72px;height:72px;border-radius:50%;background:var(--action);color:var(--action-ink);display:grid;place-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>'},
+  {t: 'Contas e parcelas, uma vez só', x: 'Cadastre contas fixas e compras parceladas uma única vez. Todo mês elas aparecem sozinhas, e você só marca como pago.',
+   il: () => '<ul class="list box" style="width:100%;margin:0"><li class="it done"><span class="chk on" style="display:grid">' + CHECK + '</span><div><div class="nm">Internet</div><div class="mt">conta fixa</div></div><div class="v">R$ 100,00</div></li><li class="it"><span class="chk"></span><div><div class="nm">Celular novo</div><div class="mt">parcela 3 de 10</div></div><div class="v">R$ 180,00</div></li></ul>'},
+  {t: 'Antes de comprar, pergunte ao Prumo', x: 'Em "Posso gastar isso?", simule uma compra e veja se ela cabe hoje e nos próximos meses.',
+   il: () => '<section class="verdict tr" style="width:100%"><div class="lv">Tranquilo</div><div class="lb">Menor sobra, em nov/26</div><div class="vn">R$ 610,00</div><div class="vt">Tênis de R$ 300 em 3x cabe com folga.</div></section>'},
+  {t: 'Seus dados são só seus', x: 'Ninguém mais vê o que você lança. De vez em quando, faça um backup em Ajustes.',
+   il: () => '<div style="display:flex;flex-direction:column;align-items:center;gap:14px"><span class="mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="small muted">Só você vê · Backup em Ajustes</span></div>'}
+];
+let tutPasso = 0;
+function abrirTutorial() {
+  tutPasso = 0; let el = document.getElementById('tut');
+  if (!el) { el = document.createElement('div'); el.id = 'tut'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); history.pushState({prumo: 'tut'}, ''); }
+  pintarTutorial();
+}
+function pintarTutorial() {
+  const el = document.getElementById('tut'); if (!el) return;
+  const T = TUT[tutPasso], ult = tutPasso === TUT.length - 1;
+  el.innerHTML = '<div class="row between"><span class="small muted">' + (tutPasso + 1) + ' de ' + TUT.length + '</span>' + (ult ? '<span></span>' : '<button class="link" id="tSkip">Pular</button>') + '</div>' +
+    '<div class="ill">' + T.il() + '</div><div><h1>' + T.t + '</h1><p class="lead" style="margin-top:10px;color:var(--muted);line-height:1.55">' + T.x + '</p></div>' +
+    '<div style="flex:1"></div><div class="dots">' + TUT.map((_, i) => '<i class="' + (i === tutPasso ? 'on' : '') + '"></i>').join('') + '</div>' +
+    '<div class="row" style="flex-wrap:nowrap">' + (tutPasso ? '<button class="btn" id="tPrev" style="flex:0 0 auto">Voltar</button>' : '') + '<button class="btn primary" id="tNext" style="flex:1">' + (ult ? 'Começar a usar' : 'Próximo') + '</button></div>';
+  const skip = el.querySelector('#tSkip'); if (skip) skip.onclick = () => fecharTutorial(false, true);
+  const prev = el.querySelector('#tPrev'); if (prev) prev.onclick = () => { tutPasso--; pintarTutorial(); };
+  el.querySelector('#tNext').onclick = () => { if (ult) fecharTutorial(false, true); else { tutPasso++; pintarTutorial(); } };
+  // deslizar no tutorial também troca de tela
+  let x0 = 0; el.ontouchstart = e => { x0 = e.touches[0].clientX; };
+  el.ontouchend = e => { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) < 60) return; if (dx < 0 && tutPasso < TUT.length - 1) { tutPasso++; pintarTutorial(); } else if (dx > 0 && tutPasso > 0) { tutPasso--; pintarTutorial(); } };
+}
+function fecharTutorial(_, doBotao) {
+  const el = document.getElementById('tut'); if (el) el.remove();
+  if (doBotao) voltarHist();
+  if (S && !S.tutorialVisto) { S.tutorialVisto = true; save(); }
+}
+
+// ---------- primeiros passos (conta nova)
+function passosEstado() {
+  return [
+    {k: 'sal', t: 'Informar salário e saldo', ok: true},
+    {k: 'fixa', t: 'Cadastrar uma conta fixa', ok: S.itens.some(i => i.rec), a: 'Cadastrar'},
+    {k: 'parc', t: 'Cadastrar uma parcela', ok: S.itens.some(i => i.n > 0 || i.divida), a: 'Cadastrar'},
+    {k: 'gasto', t: 'Lançar o primeiro gasto', ok: S.gastos.length > 0, a: 'Lançar'}
+  ];
+}
+function cardPassos() {
+  if (!S.novato) return '';
+  const ps = passosEstado(), feitos = ps.filter(p => p.ok).length;
+  if (feitos === ps.length) return '<section class="box tip pos"><div class="ic" style="color:var(--good)">' + IC.star + '</div><div style="flex:1;min-width:0"><div class="tt">Tudo pronto!</div><div class="tx">Agora é só lançar cada gasto na hora. As dicas aparecem aqui conforme você usa.</div></div><button class="x" id="passosOk" aria-label="Dispensar">×</button></section>';
+  return '<section class="box"><div class="row between"><h2>Primeiros passos</h2><span class="small muted">' + feitos + ' de ' + ps.length + '</span></div>' +
+    '<div class="bar" style="margin:8px 0 4px"><i style="width:' + (feitos / ps.length * 100) + '%;background:var(--ocre)"></i></div>' +
+    ps.map(p => '<div class="passo' + (p.ok ? ' feito' : '') + '"><span class="ok">' + (p.ok ? CHECK : '') + '</span><span class="t">' + p.t + '</span>' + (!p.ok && p.a ? '<button class="link" data-passo="' + p.k + '">' + p.a + '</button>' : '') + '</div>').join('') + '</section>';
+}
+
+// ---------- fechamento do ciclo e reserva
+const guardadoReserva = () => r2(((S.reserva && S.reserva.base) || 0) + (S.aportes || []).reduce((a, x) => a + x.v, 0));
+function fechamentoPendente() {
+  const p = ymAdd(hojeC(), -1);
+  if (!S.v6Desde || p < S.inicio || (S.fechados || {})[p]) return null;
+  if (cicloFim(p) < new Date(S.v6Desde + 'T00:00:00')) return null;
+  return p;
+}
+function cardFechamento() {
+  const p = fechamentoPendente(); if (!p) return '';
+  const sb = sobra(p).fim;
+  return '<section class="box tip ' + (sb >= 0 ? 'pos' : 'bad') + '"><div class="ic" style="color:var(--' + (sb >= 0 ? 'good' : 'bad') + ')">' + IC.calc + '</div><div style="flex:1;min-width:0"><div class="tt">Ciclo de ' + cLabel(p) + ' fechado</div><div class="tx">' +
+    (sb >= 0 ? 'Sobraram ' + brl(sb) + '. Veja o resumo e decida o destino da sobra.' : 'O ciclo fechou faltando ' + brl(-sb) + '. Veja o resumo.') +
+    '</div><button class="btn primary" id="fechar" style="margin-top:10px;min-height:42px">Ver resumo</button></div></section>';
+}
+function sheetFechamento() {
+  const p = fechamentoPendente(); if (!p) return;
+  const s0 = sobra(p), r = s0.r, sb = s0.fim, c = hojeC();
+  const ent = r2(s0.carry + r.inicial + r.salario + r.entradas);
+  let destino = 0;
+  sheet('<h2>Resumo de ' + cLabel(p) + '</h2><p class="small muted" style="margin-top:-6px">Salário de ' + ddmm(cicloInicio(p)) + ' até ' + ddmm(cicloFim(p)) + '</p>' +
+    '<div class="tiles"><div class="tile"><span>Entradas</span><b>' + brl(ent) + '</b></div><div class="tile"><span>Compromissos</span><b>' + brl(r.compromissos) + '</b></div>' +
+    '<div class="tile"><span>Gastos do dia a dia</span><b>' + brl(r.gastos) + '</b></div><div class="tile"><span>' + (sb >= 0 ? 'Sobrou' : 'Faltou') + '</span><b class="' + (sb >= 0 ? 'good' : 'bad') + '">' + brl(Math.abs(sb)) + '</b></div></div>' +
+    (sb > 0 ? '<div class="set"><h3>Para onde vai a sobra?</h3><div class="chips" id="fD"><button type="button" class="chip" data-f="0" aria-pressed="true">Levar para ' + cLabel(c) + '</button><button type="button" class="chip" data-f="0.5" aria-pressed="false">Metade na reserva</button><button type="button" class="chip" data-f="1" aria-pressed="false">Tudo na reserva</button></div>' +
+      '<label class="f">Valor para a reserva<input type="text" id="fV" inputmode="decimal" value="0,00"></label><p class="info" id="fTx"></p></div>'
+      : '<p class="info">' + (sb < 0 ? 'A falta já foi descontada do ciclo atual. Vale olhar os gastos por categoria na aba Mês.' : 'O ciclo fechou zerado.') + '</p>') +
+    '<button class="btn primary full" id="fOk">' + (sb > 0 ? 'Confirmar' : 'Entendi') + '</button>',
+    el => {
+      const inp = el.querySelector('#fV'), tx = el.querySelector('#fTx');
+      const pinta = () => { if (!tx) return; const v = Math.max(0, Math.min(sb, parseMoney(inp.value) || 0)); tx.textContent = v > 0 ? brl(v) + ' vão para a reserva e ' + brl(r2(sb - v)) + ' seguem para ' + cLabel(c) + '.' : 'A sobra toda segue para ' + cLabel(c) + ', aumentando o que você pode gastar por dia.'; destino = v; };
+      if (inp) {
+        el.querySelectorAll('#fD .chip').forEach(b => b.onclick = () => { inp.value = String(r2(sb * +b.dataset.f)).replace('.', ','); el.querySelectorAll('#fD .chip').forEach(x => x.setAttribute('aria-pressed', x === b)); pinta(); });
+        inp.oninput = () => { el.querySelectorAll('#fD .chip').forEach(x => x.setAttribute('aria-pressed', false)); pinta(); };
+        pinta();
+      }
+      el.querySelector('#fOk').onclick = () => {
+        const v = destino;
+        closeSheet();
+        mutate(() => {
+          S.fechados = Object.assign({}, S.fechados, {[p]: {t: Date.now(), sobra: sb, guardado: v}});
+          if (v > 0) S.aportes = [...(S.aportes || []), {id: uid(), c: p, v, origem: 'fechamento', t: Date.now()}];
+        }, v > 0 ? brl(v) + ' guardados na reserva' : 'Ciclo de ' + cLabel(p) + ' fechado');
+      };
+    });
+}
+function cardReserva() {
+  const g = guardadoReserva(), meta = (S.reserva && S.reserva.meta) || 0;
+  if (!meta && !g) return '<button class="box simcta" id="resBtn" type="button"><span class="ic">' + IC.star + '</span><span class="tx"><b>Criar uma meta de reserva</b><span class="sb">Guarde a sobra de cada ciclo e acompanhe o progresso</span></span><span class="chev" aria-hidden="true">›</span></button>';
+  const pct = meta ? Math.min(100, Math.round(g / meta * 100)) : 0;
+  return '<section class="box"><div class="row between"><h2>Reserva</h2><button class="link" id="resBtn">Guardar ou ajustar</button></div>' +
+    '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px"><b class="num" style="font-size:1.5rem;letter-spacing:-.02em">' + brl(g) + '</b>' + (meta ? '<span class="small muted">de ' + brl(meta) + '</span>' : '') + '</div>' +
+    (meta ? '<div class="bar" style="height:10px;margin-top:10px"><i style="width:' + pct + '%;background:var(--ocre)"></i></div><p class="small muted" style="margin-top:6px">' + (g >= meta ? 'Meta alcançada!' : pct + '% da meta · faltam ' + brl(r2(meta - g))) + '</p>' : '<p class="small muted" style="margin-top:6px">Defina uma meta para acompanhar o progresso.</p>') + '</section>';
+}
+function sheetReserva() {
+  const R = S.reserva || {meta: 0, base: 0}, c = hojeC(), g = guardadoReserva();
+  sheet('<h2>Reserva</h2><p class="small muted" style="margin-top:-6px">Guardado hoje: <b style="color:var(--ink)">' + brl(g) + '</b></p>' +
+    '<div class="set"><h3>Movimentar</h3><label class="f">Valor<input type="text" id="rV" inputmode="decimal" placeholder="R$ 0,00"></label>' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="rIn" style="flex:1">Guardar</button><button class="btn" id="rOut" style="flex:1">Retirar</button></div>' +
+    '<p class="small muted">Guardar tira o valor do que você pode gastar em ' + cLabel(c) + '. Retirar devolve.</p></div><div class="hr"></div>' +
+    '<div class="set"><h3>Meta e saldo inicial</h3><label class="f">Meta da reserva<input type="text" id="rM" inputmode="decimal" value="' + (R.meta ? String(R.meta).replace('.', ',') : '') + '" placeholder="Ex.: 3.000,00"></label>' +
+    '<label class="f">Já tinha guardado antes do app<input type="text" id="rB" inputmode="decimal" value="' + (R.base ? String(R.base).replace('.', ',') : '') + '" placeholder="R$ 0,00"></label>' +
+    '<button class="btn full" id="rSave">Salvar meta</button></div><button class="btn ghost full" data-close>Fechar</button>',
+    el => {
+      const mov = sinal => { const v = parseMoney(el.querySelector('#rV').value); if (!(v > 0)) { toast('Digite um valor'); return; } if (sinal < 0 && v > g) { toast('A reserva tem só ' + brl(g)); return; }
+        if (sinal > 0) { const livre = sobra(c).fim; if (v > livre && !confirm('Guardar ' + brl(v) + ' deixa ' + cLabel(c) + ' sem dinheiro livre (faltariam ' + brl(r2(v - livre)) + '). Guardar mesmo assim?')) return; }
+        closeSheet(); mutate(() => { S.aportes = [...(S.aportes || []), {id: uid(), c, v: r2(v * sinal), origem: 'manual', t: Date.now()}]; }, (sinal > 0 ? 'Guardado: ' : 'Retirado: ') + brl(v)); };
+      el.querySelector('#rIn').onclick = () => mov(1); el.querySelector('#rOut').onclick = () => mov(-1);
+      el.querySelector('#rSave').onclick = () => { const m = parseMoney(el.querySelector('#rM').value) || 0, b = parseMoney(el.querySelector('#rB').value) || 0;
+        closeSheet(); mutate(() => { S.reserva = {meta: Math.max(0, m), base: Math.max(0, b)}; }, 'Meta salva'); };
+    });
+}
+
+
+// ---------- gastos favoritos (os que mais se repetem)
+function favoritos() {
+  const m = {};
+  (S.gastos || []).forEach(g => { const k = g.cat + '|' + (g.desc || '').toLowerCase() + '|' + g.valor; (m[k] = m[k] || {cat: g.cat, desc: g.desc || '', valor: g.valor, n: 0, t: 0}); m[k].n++; m[k].t = Math.max(m[k].t, g.t || 0); });
+  return Object.values(m).filter(f => f.n >= 2).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 4);
+}
+
+// ---------- gastos por categoria (aba Mês)
+function cardCategorias(c) {
+  const soma = cc => { const o = {}; gastosDo(cc).forEach(g => o[g.cat] = r2((o[g.cat] || 0) + g.valor)); return o; };
+  const a = soma(c), b = soma(ymAdd(c, -1)), cats = Object.keys(a).sort((x, y) => a[y] - a[x]);
+  if (!cats.length) return '';
+  const max = Math.max(...cats.map(k => a[k]));
+  return '<section class="box"><h2>Gastos por categoria</h2><p class="small muted" style="margin-top:2px">Comparado com ' + cLabel(ymAdd(c, -1)) + '</p><div style="margin-top:8px">' +
+    cats.map(k => { const d = r2(a[k] - (b[k] || 0)); const dl = !(k in b) ? '<span class="muted">novo neste ciclo</span>' : d === 0 ? '<span class="muted">igual</span>' : '<span class="' + (d > 0 ? 'bad' : 'good') + '">' + (d > 0 ? '+' : '−') + brl(Math.abs(d)).replace('−', '') + ' que antes</span>';
+      return '<div class="catrow"><div class="hd"><b>' + esc(k) + '</b><span class="num">' + brl(a[k]) + '</span></div><div class="bar"><i style="width:' + Math.round(a[k] / max * 100) + '%"></i></div><div class="dl">' + dl + '</div></div>'; }).join('') + '</div></section>';
+}
+
+// ---------- projeção dos próximos ciclos (aba Dívidas)
+function cardProjecao() {
+  const c = hojeC(), cs = Array.from({length: 6}, (_, k) => ymAdd(c, k)), vs = cs.map(k => propria(k));
+  const max = Math.max(1, ...vs.map(Math.abs));
+  return '<section class="box"><h2>Projeção dos próximos ciclos</h2><p class="small muted" style="margin-top:2px">O que sobra de cada ciclo depois dos compromissos, sem os gastos do dia a dia.</p><div style="margin-top:8px">' +
+    cs.map((k, i) => '<div class="proj"><span class="muted">' + cLabel(k) + '</span><div class="trk"><i class="' + (vs[i] < 0 ? 'neg' : '') + '" style="width:' + Math.max(2, Math.round(Math.abs(vs[i]) / max * 100)) + '%"></i></div><span class="v ' + (vs[i] < 0 ? 'bad' : '') + '">' + brl(vs[i]) + '</span></div>').join('') + '</div></section>';
+}
+
+// ---------- contador de dias sem crédito novo
+function diasSemCredito() {
+  const ts = S.itens.filter(i => i.divida !== false && i.criado).map(i => i.criado);
+  const ini = ts.length ? Math.max(...ts) : new Date((S.v6Desde || isoDate(today())) + 'T00:00:00').getTime();
+  return Math.max(0, Math.floor((today() - new Date(new Date(ini).setHours(0, 0, 0, 0))) / 864e5));
+}
+function registrarCredito() { const d = diasSemCredito(); if (d > (S.recordeSemCredito || 0)) S.recordeSemCredito = d; }
+function cardContador() {
+  const d = diasSemCredito(), rec = Math.max(S.recordeSemCredito || 0, d);
+  return '<section class="box streak"><div class="ic" style="width:40px;height:40px;border-radius:var(--rs);background:var(--inset);display:grid;place-items:center;color:var(--good);flex:none">' + IC.star + '</div>' +
+    '<div style="flex:1"><b class="num">' + d + (d === 1 ? ' dia' : ' dias') + '</b><div class="small muted">sem crédito novo · recorde: ' + rec + (rec === 1 ? ' dia' : ' dias') + '</div></div></section>';
+}
+
+// ---------- calculadora "para onde vai o dinheiro extra"
+const jurosDe = it => { if (it.juros != null && it.juros !== '') return +it.juros; const m = String(it.custo || '').match(/(\d+(?:[.,]\d+)?)\s*%/); return m ? parseFloat(m[1].replace(',', '.')) : null; };
+function economia(d, extra, c) {
+  const i = jurosDe(d.it); if (!(i > 0)) return null;
+  const parcelas = d.pend.map(k => ({k, v: valorEm(d.it, k) || 0, m: Math.max(0, (Number(k.slice(0, 4)) - Number(c.slice(0, 4))) * 12 + Number(k.slice(5)) - Number(c.slice(5)))})).reverse();
+  let resto = extra, quitadas = 0, valorQuitado = 0;
+  for (const pz of parcelas) {
+    const custo = pz.v / Math.pow(1 + i / 100, pz.m);
+    if (resto >= custo) { resto -= custo; quitadas++; valorQuitado += pz.v; }
+    else { valorQuitado += resto * Math.pow(1 + i / 100, pz.m); resto = 0; break; }
+  }
+  const usado = r2(extra - resto);
+  return {i, usado, eco: r2(valorQuitado - usado), quitadas};
+}
+function sheetExtra() {
+  const di = dividasInfo(), c = hojeC();
+  sheet('<h2>Tenho um dinheiro extra</h2><p class="small muted" style="margin-top:-6px">Veja quanto de juros você economiza antecipando cada dívida.</p>' +
+    '<input class="money" id="xV" inputmode="decimal" placeholder="R$ 0,00" aria-label="Valor extra"><div id="xOut"></div>' +
+    '<p class="info">Estimativa: antecipa as últimas parcelas primeiro, com o desconto dos juros do período. O valor exato depende do credor. Edite os juros de cada dívida tocando no nome dela na aba Dívidas.</p>' +
+    '<button class="btn ghost full" data-close>Fechar</button>',
+    el => {
+      const out = el.querySelector('#xOut'), v = el.querySelector('#xV');
+      const pinta = () => {
+        const x = parseMoney(v.value);
+        if (!(x > 0)) { out.innerHTML = ''; return; }
+        const rs = di.ativas.map(d => ({d, e: economia(d, x, c)}));
+        const com = rs.filter(r => r.e && r.e.eco > 0).sort((a, b) => b.e.eco - a.e.eco), sem = rs.filter(r => !r.e || r.e.eco <= 0);
+        out.innerHTML = '<section class="box" style="margin-top:4px">' + (com.length ? com.map((r, k) => '<div class="econ"><div class="hd"><b>' + (k === 0 ? '★ ' : '') + esc(r.d.it.nome) + '</b><span class="g">economiza ' + brl(r.e.eco) + '</span></div><div class="small muted">' + String(r.e.i).replace('.', ',') + '% ao mês · ' + (r.e.quitadas ? r.e.quitadas + (r.e.quitadas === 1 ? ' parcela a menos' : ' parcelas a menos') : 'abate parte da última parcela') + (r.e.usado < x ? ' · usa ' + brl(r.e.usado) + ' e quita tudo' : '') + '</div></div>').join('') : '<p class="empty">Nenhuma dívida com juros informados.</p>') +
+          (sem.length ? '<p class="small muted" style="margin-top:8px">Sem economia (sem juros ou juros não informados): ' + sem.map(r => esc(r.d.it.nome)).join(', ') + '.</p>' : '') + '</section>';
+      };
+      v.oninput = pinta;
+    });
+}
+
+// ---------- excluir conta
+function sheetExcluirConta() {
+  sheet('<h2>Excluir minha conta</h2><p class="note">Isso apaga <b>todos</b> os seus dados e a sua conta de forma permanente. Se quiser guardar uma cópia, exporte um backup antes.</p>' +
+    '<label class="f">Digite sua senha para confirmar<input type="password" id="dP" autocomplete="current-password"></label>' +
+    '<label class="check"><input type="checkbox" id="dOk"><span>Entendo que não dá para desfazer.</span></label><p class="err" id="dErr" role="alert" hidden></p>' +
+    '<div class="row" style="flex-wrap:nowrap"><button class="btn danger" id="dGo" style="flex:1">Excluir tudo</button><button class="btn ghost" data-close>Cancelar</button></div>',
+    el => {
+      const err = el.querySelector('#dErr'), show = t => { err.textContent = t; err.hidden = !t; };
+      el.querySelector('#dGo').onclick = async () => {
+        if (!el.querySelector('#dOk').checked) { show('Marque a confirmação.'); return; }
+        const u = AUTH.currentUser; if (!u) return;
+        try { await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, el.querySelector('#dP').value)); }
+        catch (e) { show(AUTH_ERR[e && e.code] || 'Senha incorreta.'); return; }
+        try {
+          if (unsub) { unsub(); unsub = null; }
+          const ref = DOCREF; DOCREF = null; S = null;
+          if (ref) await deleteDoc(ref);
+          try { localStorage.removeItem(LS); } catch (e) {}
+          await deleteUser(u);
+          closeSheet(); toast('Conta excluída');
+        } catch (e) { show('Não foi possível excluir agora (' + (e && e.code || 'erro') + '). Tente de novo.'); }
       };
     });
 }
@@ -1062,23 +1577,28 @@ function render() {
   document.getElementById('eyeBtn').hidden = document.getElementById('setBtn').hidden = !logged;
   if (USER === 'sem-config') { document.getElementById('sub').textContent = 'Configuração pendente'; V.innerHTML = '<div class="panel"><section class="box"><h2>Falta configurar o Firebase</h2><p class="small muted" style="margin-top:6px">Cole os dados do seu projeto no arquivo firebase-config.js (passo 5 do guia) e publique de novo.</p></section></div>'; return; }
   if (USER === undefined) { V.innerHTML = '<div class="panel"><section class="box"><p class="empty">Carregando…</p></section></div>'; return; }
-  if (USER === null) { document.getElementById('sub').textContent = 'Controle do mês'; V.innerHTML = '<div class="panel">' + viewLogin() + '</div>'; bindLogin(V); return; }
+  if (USER === null) { document.getElementById('sub').textContent = 'Controle do mês'; V.innerHTML = '<div class="panel">' + (telaAuth === 'cadastro' ? viewCadastro() : viewLogin()) + '</div>'; bindLogin(V); return; }
+  if (!S && (PRECISA_VERIF || (CLOUD_EMPTY && !USER.emailVerified))) {
+    document.getElementById('nav').hidden = true; document.getElementById('sub').textContent = 'Primeiro acesso';
+    V.innerHTML = viewConfirmar(); bindConfirmar(V); return;
+  }
   if (!S) {
     if (CLOUD_EMPTY) {
       document.getElementById('sub').textContent = 'Primeiro acesso';
-      V.innerHTML = '<div class="panel">' + viewBemVindo() + '</div>';
-      const f = V.querySelector('#wFile'); V.querySelector('#wImp').onclick = () => f.click();
-      f.onchange = () => { if (f.files && f.files[0]) importBackup(f.files[0]); f.value = ''; };
+      V.innerHTML = viewConfig(); bindConfig(V);
       return;
     }
     V.innerHTML = '<div class="panel"><section class="box"><p class="empty">Carregando seus dados…</p></section></div>'; return;
   }
   const c = hojeC(), dias = Math.max(1, Math.round((cicloFim(c) - today()) / 864e5) + 1);
-  document.getElementById('sub').textContent = 'Pagamentos de ' + cLabel(c) + ', próximo salário em ' + dias + (dias === 1 ? ' dia' : ' dias');
+  document.getElementById('sub').textContent = (S.nome ? 'Olá, ' + S.nome + ' · ' : 'Pagamentos de ' + cLabel(c) + ', ') + (S.nome ? 'salário em ' : 'próximo salário em ') + dias + (dias === 1 ? ' dia' : ' dias');
   const html = tab === 'mes' ? viewMes() : tab === 'dividas' ? viewDividas() : tab === 'receber' ? viewReceber() : tab === 'sim' ? viewSim() : viewHoje();
   V.innerHTML = '<div class="panel">' + html + '</div>';
   bind(V);
+  if (!S.tutorialVisto && !document.getElementById('tut')) setTimeout(abrirTutorial, 80);
+  else if (ACAO) { const a = ACAO; ACAO = null; try { history.replaceState(history.state, '', location.pathname); } catch (e) {} setTimeout(() => sheetGasto(null, a === 'simular' ? 'simular' : undefined), 80); }
 }
+let ACAO = new URLSearchParams(location.search).get('acao');
 function bind(V) {
   V.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
     const id = b.dataset.pay, c = b.dataset.c;
@@ -1096,10 +1616,10 @@ function bind(V) {
     S.dispensadas = Object.fromEntries(Object.entries(S.dispensadas).filter(([k]) => k >= ymAdd(c, -1)));
     S.dispensadas[c] = [...(S.dispensadas[c] || []), b.dataset.dismiss];
   }, 'Dica dispensada'));
-  V.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { tab = b.dataset.go; viewCycle = null; render(); window.scrollTo(0, 0); });
+  V.querySelectorAll('[data-go]').forEach(b => b.onclick = () => irAba(b.dataset.go));
   V.querySelectorAll('[data-cy]').forEach(b => b.onclick = () => { viewCycle = ymAdd(viewCycle || hojeC(), +b.dataset.cy); if (viewCycle < S.inicio) viewCycle = S.inicio; render(); });
   V.querySelectorAll('[data-ini]').forEach(b => b.onclick = () => { if (confirm('Informar o saldo de novo?')) mutate(() => { delete S.saldoInicial[b.dataset.ini]; }, 'Saldo apagado'); });
-  const os = V.querySelector('#openSim'); if (os) os.onclick = () => { tab = 'sim'; render(); window.scrollTo(0, 0); };
+  const os = V.querySelector('#openSim'); if (os) os.onclick = () => sheetGasto(null, 'simular');
   const sal = V.querySelector('#salEdit'); if (sal) sal.onclick = sheetSalario;
   const ni = V.querySelector('#newItem'); if (ni) ni.onclick = sheetNovoItem;
   const ne = V.querySelector('#newEnt'); if (ne) ne.onclick = () => sheetEntrada(null);
@@ -1110,9 +1630,46 @@ function bind(V) {
     mutate(() => { S.saldoInicial = Object.assign({}, S.saldoInicial || {}, {[hojeC()]: v}); }, 'Saldo salvo');
   };
   if (tab === 'sim') bindSim(V);
+  V.querySelectorAll('[data-passo]').forEach(b => b.onclick = () => { const k = b.dataset.passo; if (k === 'gasto') sheetGasto(null); else sheetNovoItem(k); });
+  const po = V.querySelector('#passosOk'); if (po) po.onclick = () => mutate(() => { S.novato = false; }, 'Primeiros passos concluídos');
+  const fe = V.querySelector('#fechar'); if (fe) fe.onclick = sheetFechamento;
+  const rb = V.querySelector('#resBtn'); if (rb) rb.onclick = sheetReserva;
+  const xb = V.querySelector('#extraBtn'); if (xb) xb.onclick = sheetExtra;
 }
 
-document.querySelectorAll('.nav [role=tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; viewCycle = null; render(); window.scrollTo(0, 0); });
+const ABAS = ['hoje', 'mes', 'dividas', 'receber'];
+function irAba(nova, doVoltar) {
+  if (!S || nova === tab) return;
+  const de = ABAS.indexOf(tab), para = ABAS.indexOf(nova);
+  if (!doVoltar) {
+    if (nova !== 'hoje' && !histAba) { histAba = true; history.pushState({prumo: 'aba'}, ''); }
+    else if (nova === 'hoje' && histAba) { histAba = false; voltarHist(); }
+  }
+  tab = nova; viewCycle = null; render(); topo();
+  const v = document.getElementById('view');
+  v.classList.remove('vem-dir', 'vem-esq'); void v.offsetWidth;
+  v.classList.add(de === -1 || para > de ? 'vem-dir' : 'vem-esq');
+}
+document.querySelectorAll('.nav [role=tab]').forEach(b => b.onclick = () => irAba(b.dataset.tab));
+// Deslize horizontal: para a esquerda avança de aba, para a direita volta.
+// Só conta se for claramente horizontal, rápido e longe das bordas (onde fica o "voltar" do Android).
+(() => {
+  const area = document.getElementById('rolagem');
+  let x0 = 0, y0 = 0, t0 = 0, valido = false;
+  area.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    valido = e.touches.length === 1 && !document.querySelector('#layer .sheet') && ABAS.includes(tab) &&
+      t.clientX > 24 && t.clientX < window.innerWidth - 24 && !e.target.closest('input, select, textarea');
+    x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+  }, {passive: true});
+  area.addEventListener('touchend', e => {
+    if (!valido) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Date.now() - t0 > 600 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const i = ABAS.indexOf(tab), j = dx < 0 ? i + 1 : i - 1;
+    if (j >= 0 && j < ABAS.length) irAba(ABAS[j]);
+  }, {passive: true});
+})();
 document.getElementById('addBtn').onclick = () => { if (S) sheetGasto(null); };
 document.getElementById('eyeBtn').onclick = () => { setHide(!HIDE); toast(HIDE ? 'Valores ocultos' : 'Valores visíveis'); };
 document.getElementById('setBtn').onclick = sheetAjustes;
@@ -1120,6 +1677,7 @@ paintEye();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 applyTheme(themeMode());
+try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch (e) {}
 render();
 initFirebase();
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
