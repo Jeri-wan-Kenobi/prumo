@@ -255,6 +255,28 @@ body.kb-aberto .pg-rodape{padding-bottom:10px}
 .pg-rodape .btn{white-space:nowrap;padding-left:10px;padding-right:10px;font-size:.92rem}
 .pg-icone{width:56px;height:56px;border-radius:16px;background:var(--inset);display:flex;align-items:center;justify-content:center;color:var(--ocre)}
 .pg-icone svg{width:28px;height:28px}
+/* ---------- V6.3: cards deslizantes ---------- */
+.carr{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;border-radius:var(--r)}
+.carr::-webkit-scrollbar{display:none}
+.carr > *{flex:0 0 100%;min-width:0;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;margin:0}
+.dots{display:flex;justify-content:center;gap:2px;margin-top:-6px}
+.dots button{width:26px;height:24px;border:0;background:transparent;padding:0;display:grid;place-items:center;cursor:pointer}
+.dots button i{display:block;width:6px;height:6px;border-radius:3px;background:var(--line);transition:width .2s,background .2s}
+.dots button[aria-current="true"] i{width:18px;background:var(--action)}
+.box .carr{border-radius:0}
+.box .dots{margin-top:4px}
+.segs i.res{background:rgba(255,255,255,.42)}
+.segs.claro{margin-top:10px}.segs.claro i{height:16px;background:var(--inset);border:1px solid var(--line);box-sizing:border-box}
+.segs.claro i.ct{background:var(--action);border-color:var(--action)}.segs.claro i.gs{background:var(--coral);border-color:var(--coral)}
+.segs.claro i.rs{background:var(--jade);border-color:var(--jade)}.segs.claro i.sb{background:var(--ocre);border-color:var(--ocre)}.segs.claro i.ng{background:var(--bad);border-color:var(--bad)}
+.leg{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.leg div{display:flex;align-items:center;gap:8px;font-size:.84rem}
+.leg i{width:10px;height:10px;border-radius:3px;flex:none}
+.leg span{flex:1;color:var(--muted)}.leg b{font-weight:600;font-variant-numeric:tabular-nums}
+.visao .topo{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.visao .topo b{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums}
+.verdict .dica{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.14);font-size:.84rem;line-height:1.4}
+.verdict.at .dica{border-top-color:var(--line)}
 .pg-pergunta{margin:0;font-size:1.35rem;font-weight:600;letter-spacing:-.01em;line-height:1.25}
 .sheet-in > .row:last-child{position:sticky;bottom:-18px;margin:0 -18px -18px;padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);box-shadow:0 -10px 14px -10px rgba(0,0,0,.35);z-index:2}
 body.kb-aberto .sheet-in > .row:last-child{padding-bottom:12px}
@@ -478,6 +500,15 @@ function propria(c) {
   if (c <= hojeC()) return sobra(c).fim;
   const r = resumo(c);
   return r2(r.inicial + r.salario + r.entradas - r.compromissos - r.aportes);
+}
+// Folga: quanto dá para gastar hoje sem deixar nenhum ciclo futuro descoberto.
+// Uma compra à vista hoje reduz a sobra de todos os ciclos seguintes, então a folga é a menor sobra prevista.
+function folgaInfo() {
+  const c = hojeC(), livre = sobra(c).fim;
+  let folga = livre, mes = c;
+  for (let k = 1; k <= 12; k++) { const cc = ymAdd(c, k), f = sobra(cc).fim; if (f < folga) { folga = f; mes = cc; } }
+  const rm = resumo(mes), renda = r2(rm.inicial + rm.salario + rm.entradas);
+  return {c, livre, folga: r2(folga), mes, reservado: r2(Math.max(0, livre - folga)), compMes: rm.compromissos, rendaMes: renda};
 }
 function dividasInfo() {
   const lst = S.itens.filter(it => it.divida !== false).map(it => {
@@ -822,6 +853,16 @@ function dicas(c) {
     out.push({id: 'negativo', kind: 'bad', icon: IC.alert, t: 'O ciclo não fecha',
       x: 'Faltam ' + brl(-livre) + '. Antes de pegar crédito, veja se dá para adiar algum pagamento sem juros ou receber um valor pendente.'});
   }
+  // 1b. parte do livre já tem destino em ciclos futuros
+  if (temSaldo && livre > 0) {
+    const fi = folgaInfo();
+    if (fi.mes !== c && fi.reservado >= Math.max(50, livre * 0.1)) out.push({id: 'comprometido-' + fi.mes + '-' + Math.round(fi.reservado), kind: fi.folga < 0 ? 'bad' : 'urg', icon: IC.alert,
+      t: cLabel(fi.mes) + ' já está comprometido',
+      x: (fi.mes === ymAdd(c, 1) && fi.rendaMes > 0
+        ? 'As contas de ' + cLabel(fi.mes) + ' somam ' + brl(fi.compMes) + ' e o salário cobre ' + brl(fi.rendaMes) + '. '
+        : 'Até ' + cLabel(fi.mes) + ', as contas passam do que entra. ') +
+        (fi.folga < 0 ? 'Mesmo sem gastar nada, faltam ' + brl(-fi.folga) + '.' : 'Os ' + brl(fi.reservado) + ' que faltam saem do que está livre agora.')});
+  }
   // 2. vencimentos próximos
   const prox = [];
   [c, ymAdd(c, 1)].forEach(cc => itensDo(cc).forEach(x => { if (pago(cc, x.it.id)) return; const d = vencData(x.it, cc); if (!d) return; const n = Math.round((d - t) / 864e5); if (n <= 3) prox.push({x, n, d}); }));
@@ -891,8 +932,40 @@ function gastoRow(g) {
   const d = new Date(g.data + 'T00:00:00');
   return '<li class="it plain"><div><div class="nm" data-gasto="' + g.id + '">' + esc(g.cat) + (g.desc ? ', ' + esc(g.desc) : '') + '</div><div class="mt">' + ddmm(d) + '</div></div><div class="v">' + brl(g.valor) + '</div></li>';
 }
+// Carrossel: só os cards rolam na horizontal; a posição de cada um fica guardada enquanto o app está aberto.
+const CAR = {};
+function carrossel(id, cards, rotulo) {
+  return '<div class="carr" data-car="' + id + '" role="group" aria-roledescription="carrossel" aria-label="' + esc(rotulo) + '">' + cards.join('') + '</div>' +
+    '<div class="dots" data-dots="' + id + '">' + cards.map((_, i) => '<button type="button" aria-label="Card ' + (i + 1) + ' de ' + cards.length + '" aria-current="' + (i === (CAR[id] || 0)) + '"><i></i></button>').join('') + '</div>';
+}
+function ligarCarrosseis(raiz) {
+  const lst = raiz.matches && raiz.matches('.carr') ? [raiz] : Array.from(raiz.querySelectorAll ? raiz.querySelectorAll('.carr:not([data-ligado])') : []);
+  lst.forEach(el => {
+    if (el.dataset.ligado) return; el.dataset.ligado = '1';
+    const id = el.dataset.car, passo = () => el.clientWidth + 12;
+    const dots = () => document.querySelectorAll('[data-dots="' + id + '"] button');
+    const marcar = i => dots().forEach((b, k) => b.setAttribute('aria-current', k === i));
+    if (CAR[id]) el.scrollLeft = CAR[id] * passo();
+    el.addEventListener('scroll', () => { const i = Math.round(el.scrollLeft / passo()); if (i !== (CAR[id] || 0)) { CAR[id] = i; marcar(i); } }, {passive: true});
+    dots().forEach((b, k) => b.onclick = () => el.scrollTo({left: k * passo(), behavior: 'smooth'}));
+  });
+}
 const segs = (on, n = 10) => Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('');
 
+function heroFolga() {
+  const fi = folgaInfo(), fneg = fi.folga < 0;
+  if (fneg) return '<section class="hero neg"><p class="lbl">Faltam para as contas de ' + cLabel(fi.mes) + '</p><p class="big">' + brl(-fi.folga) + '</p>' +
+    '<p class="ctx">Mesmo sem gastar mais nada, o dinheiro previsto não cobre todas as contas até ' + cLabel(fi.mes) + '.</p>' +
+    '<div class="segs" aria-hidden="true">' + segs(0) + '</div><p class="cap">Veja na aba Mês o que dá para adiar ou receber antes.</p></section>';
+  const on = fi.livre > 0 ? Math.max(0, Math.min(10, Math.round(fi.folga / fi.livre * 10))) : 0;
+  const barras = Array.from({length: 10}, (_, i) => '<i class="' + (i < on ? 'on' : 'res') + '"></i>').join('');
+  const fut = fi.reservado > 0;
+  return '<section class="hero"><p class="lbl">Folga sem atrasar nenhuma conta</p>' +
+    '<p class="big">' + brl(fi.folga) + '</p>' +
+    '<p class="ctx">' + (fut ? 'Livre hoje <b>' + brl(fi.livre) + '</b> · separado p/ ' + cLabel(fi.mes) + ' <b>' + brl(fi.reservado) + '</b>' : 'Nenhum ciclo futuro precisa do que está livre hoje.') + '</p>' +
+    '<div class="segs" aria-hidden="true">' + barras + '</div>' +
+    '<p class="cap">' + (on >= 10 ? 'Todo o livre é folga: os próximos salários cobrem as próximas contas.' : on + ' de 10 partes são folga. As outras ' + (10 - on) + ' já pagam contas de ' + cLabel(fi.mes) + '.') + '</p></section>';
+}
 function viewHoje() {
   const c = hojeC(), s = sobra(c), r = s.r;
   const fim = cicloFim(c), dias = Math.max(1, Math.round((fim - today()) / 864e5) + 1);
@@ -908,11 +981,12 @@ function viewHoje() {
     const neg = livre < 0;
     const base = Math.max(0.01, r.gastos + Math.max(livre, 0));
     const on = neg ? 0 : Math.max(0, Math.min(10, Math.round(Math.max(livre, 0) / base * 10)));
-    h += '<section class="hero' + (neg ? ' neg' : '') + '"><p class="lbl">' + (neg ? 'Faltam para fechar o ciclo' : 'Posso gastar hoje') + '</p>' +
+    const diario = '<section class="hero' + (neg ? ' neg' : '') + '"><p class="lbl">' + (neg ? 'Faltam para fechar o ciclo' : 'Posso gastar hoje') + '</p>' +
       '<p class="big">' + (neg ? brl(-livre) : brl(porDia) + '<small>por dia</small>') + '</p>' +
       '<p class="ctx">' + (neg ? 'Os compromissos passam do dinheiro disponível.' : 'Livre no ciclo: <b>' + brl(livre) + '</b>') + '</p>' +
       '<div class="segs" aria-hidden="true">' + segs(on) + '</div>' +
       '<p class="cap">' + (neg ? 'Gasto no ciclo: ' + brl(r.gastos) : on + ' de 10 partes disponíveis. Gasto no ciclo: ' + brl(r.gastos)) + '</p></section>';
+    h += carrossel('hoje', [heroFolga(), diario], 'Resumo de hoje');
   }
 
   if (S.saldoInicial && c in S.saldoInicial) h += '<button class="box saldo-card" type="button" data-saldo="' + c + '"><span style="flex:1;min-width:0"><span class="small muted" style="display:block">Saldo informado em ' + cLabel(c) + '</span><span class="v">' + brl(S.saldoInicial[c]) + '</span></span><span class="link" style="padding:0">Editar</span></button>';
@@ -947,12 +1021,29 @@ function viewHoje() {
   return h;
 }
 
+function visaoMes(c, s, r) {
+  const ent = r2(s.carry + r.inicial + r.salario + r.entradas), aport = Math.max(0, r.aportes);
+  const base = Math.max(0.01, ent, r.compromissos + r.gastos + aport);
+  const q = v => Math.round(v / base * 10);
+  let nct = q(r.compromissos), ngs = q(r.gastos), nrs = q(aport);
+  if (r.compromissos > 0 && !nct) nct = 1; if (r.gastos > 0 && !ngs) ngs = 1; if (aport > 0 && !nrs) nrs = 1;
+  const usados = Math.min(10, nct + ngs + nrs), nsb = s.fim > 0 ? Math.max(s.fim >= 0.5 && usados < 10 ? 1 : 0, 10 - usados) : 0;
+  const cls = [...Array(nct).fill('ct'), ...Array(ngs).fill('gs'), ...Array(nrs).fill('rs'), ...Array(nsb).fill('sb')].slice(0, 10);
+  if (s.fim < 0 && cls.length) cls[cls.length - 1] = 'ng';
+  while (cls.length < 10) cls.push('');
+  const its = itensDo(c), pagas = its.filter(x => pago(c, x.it.id)).length;
+  const L = (k, t, v) => '<div><i style="background:var(--' + k + ')"></i><span>' + t + '</span><b>' + v + '</b></div>';
+  return '<div class="visao"><div class="topo"><span class="small muted">' + (s.fim < 0 ? 'Faltam no fim do ciclo' : 'Sobra prevista') + '</span><b class="' + (s.fim < 0 ? 'bad' : 'good') + '">' + brl(Math.abs(s.fim)) + '</b></div>' +
+    '<div class="segs claro" aria-hidden="true">' + cls.map(k => '<i class="' + k + '"></i>').join('') + '</div>' +
+    '<div class="leg">' + L('action', 'Contas', brl(r.compromissos)) + L('coral', 'Gastos lançados', brl(r.gastos)) + (aport > 0 ? L('jade', 'Guardado na reserva', brl(aport)) : '') + L('ocre', 'Sobra', brl(Math.max(0, s.fim))) + '</div>' +
+    '<p class="small muted" style="margin-top:8px">' + (its.length ? 'Contas pagas: ' + pagas + ' de ' + its.length : 'Nenhuma conta neste ciclo') + (s.carry > 0 ? ' · inclui ' + brl(s.carry) + ' que sobram de ' + cLabel(ymAdd(c, -1)) : '') + '</p></div>';
+}
 function viewMes() {
   const c = viewCycle || hojeC(), s = sobra(c), r = s.r;
   const ini = cicloInicio(c), fim = cicloFim(c);
   let h = '<section class="box"><div class="cycle-nav"><button data-cy="-1" aria-label="Ciclo anterior">‹</button><div class="c"><b>Pagamentos de ' + cLabel(c) + (c === hojeC() ? ' (atual)' : '') + '</b><span>salário de ' + ddmm(ini) + ', até ' + ddmm(fim) + '</span></div><button data-cy="1" aria-label="Próximo ciclo">›</button></div>' +
-    '<div class="tiles"><div class="tile"><span>Entradas</span><b>' + brl(r2(s.carry + r.inicial + r.salario + r.entradas)) + '</b></div><div class="tile"><span>Compromissos</span><b>' + brl(r.compromissos) + '</b></div>' +
-    '<div class="tile"><span>Gastos lançados</span><b>' + brl(r.gastos) + '</b></div><div class="tile"><span>Sobra</span><b class="' + (s.fim < 0 ? 'bad' : 'good') + '">' + brl(s.fim) + '</b></div></div></section>';
+    carrossel('mes', [visaoMes(c, s, r), '<div class="tiles" style="margin-top:0"><div class="tile"><span>Entradas</span><b>' + brl(r2(s.carry + r.inicial + r.salario + r.entradas)) + '</b></div><div class="tile"><span>Compromissos</span><b>' + brl(r.compromissos) + '</b></div>' +
+    '<div class="tile"><span>Gastos lançados</span><b>' + brl(r.gastos) + '</b></div><div class="tile"><span>Sobra</span><b class="' + (s.fim < 0 ? 'bad' : 'good') + '">' + brl(s.fim) + '</b></div></div>'], 'Resumo do mês') + '</section>';
 
   const its = itensDo(c).sort((a, b) => { const da = vencData(a.it, c), db = vencData(b.it, c); return (da ? da.getTime() : 9e15) - (db ? db.getTime() : 9e15); });
   const falta = r2(r.compromissos - r.pagoV);
@@ -1112,12 +1203,27 @@ function impactoVista(val) {
   else if (val <= porDia) { nv = 'tr'; tit = 'Cabe no limite de hoje'; txt = 'Ainda sobram ' + brl(r2(porDia - val)) + ' do limite de hoje.'; }
   else if (porDia2 >= porDia * 0.8) { nv = 'at'; tit = 'Passa do limite de hoje'; txt = 'Passa ' + brl(r2(val - porDia)) + ' do limite de hoje, mas os próximos dias quase não mudam.'; }
   else { nv = 'arr'; tit = 'Aperta os próximos dias'; txt = 'Passa ' + brl(r2(val - porDia)) + ' do limite de hoje e reduz o que sobra para cada dia até o salário.'; }
-  return '<section class="verdict mini ' + nv + '" aria-live="polite"><div class="lv">' + tit + '</div>' +
+  const diario = '<section class="verdict mini ' + nv + '"><div class="lv">' + tit + '</div>' +
     '<div class="lb">Posso gastar por dia</div><div class="vn"><span class="de">' + brl(porDia) + ' →</span> ' + brl(porDia2) + '</div>' +
     '<div class="vt">' + esc(txt) + ' Livre no ciclo: ' + brl(livre) + ' → ' + brl(livre2) + '.</div></section>';
+  return '<div aria-live="polite">' + carrossel('gasto', [impactoMes(val), diario], 'Efeito do gasto') + '</div>';
+}
+// Card 1: efeito do gasto nas contas que ainda faltam (este ciclo e os próximos)
+function impactoMes(val) {
+  const fi = folgaInfo(), depois = r2(fi.folga - val), m = cLabel(fi.mes);
+  let nv, tit, txt;
+  if (val > fi.livre) { nv = 'nc'; tit = 'Não cabe neste ciclo'; txt = 'Passa ' + brl(r2(val - fi.livre)) + ' do que está livre até o salário de ' + ddmm(cicloInicio(ymAdd(fi.c, 1))) + '.'; }
+  else if (depois < 0) { nv = 'nc'; tit = 'Atrasa contas de ' + m; txt = fi.mes === fi.c ? 'Faltariam ' + brl(-depois) + ' para as contas deste ciclo.' : 'Hoje dá para pagar, mas no salário de ' + ddmm(cicloInicio(fi.mes)) + ' faltariam ' + brl(-depois) + ' para as contas de ' + m + '.'; }
+  else if (val > fi.folga * 0.5) { nv = 'at'; tit = 'Cabe, mas a folga fica curta'; txt = 'Nenhuma conta atrasa. Depois desta compra, sobram ' + brl(depois) + ' de folga até ' + m + '.'; }
+  else { nv = 'tr'; tit = 'Cabe sem atrasar nenhuma conta'; txt = 'Todas as contas até ' + m + ' continuam cobertas. A folga fica em ' + brl(depois) + '.'; }
+  return '<section class="verdict mini ' + nv + '"><div class="lv">' + tit + '</div>' +
+    '<div class="lb">Folga sem atrasar contas</div><div class="vn"><span class="de">' + brl(fi.folga) + ' →</span> ' + (depois < 0 ? '−' + brl(-depois) : brl(depois)) + '</div>' +
+    '<div class="vt">' + esc(txt) + '</div>' +
+    (nv === 'tr' ? '' : '<div class="dica">' + (fi.folga > 0 ? 'Cabe até <b>' + brl(fi.folga) + '</b> sem atrasar nada.' : 'As contas até ' + m + ' já estão descobertas. Antes de gastar, veja o que dá para adiar ou receber.') + '</div>') + '</section>';
 }
 function sheetGasto(g, modo) {
   const edit = !!g, simular = modo === 'simular'; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
+  delete CAR.gasto;
   const c = hojeC();
   const opts = Array.from({length: 4}, (_, k) => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === ymAdd(c, 1) ? ' selected' : '') + '>' + cLabel(k) + (k === c ? ' (atual)' : '') + '</option>').join('');
   sheet((simular ? '' : '<h2>' + (edit ? 'Editar gasto' : 'Novo gasto') + '</h2>') +
@@ -1360,7 +1466,7 @@ function sheetAjustes() {
 }
 
 /* ================= V6 ================= */
-const VERSAO_APP = '6.2';
+const VERSAO_APP = '6.3';
 // ---------- instalação (Android) e instruções (iPhone)
 const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1732,7 +1838,7 @@ function prepararCampos(raiz) {
     i.addEventListener('click', () => abrirTeclado(i));
   });
 }
-new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) prepararCampos(n); }))).observe(document.body, {childList: true, subtree: true});
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { prepararCampos(n); ligarCarrosseis(n); } }))).observe(document.body, {childList: true, subtree: true});
 function abrirTeclado(i) {
   if (TEC.alvo === i && TEC.el) return;
   if (TEC.alvo) TEC.alvo.classList.remove('ativo');
@@ -1888,7 +1994,7 @@ document.querySelectorAll('.nav [role=tab]').forEach(b => b.onclick = () => irAb
   area.addEventListener('touchstart', e => {
     const t = e.touches[0];
     valido = e.touches.length === 1 && !document.querySelector('#layer .sheet') && ABAS.includes(tab) &&
-      t.clientX > 24 && t.clientX < window.innerWidth - 24 && !e.target.closest('input, select, textarea');
+      t.clientX > 24 && t.clientX < window.innerWidth - 24 && !e.target.closest('input, select, textarea, .carr, .dots');
     x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
   }, {passive: true});
   area.addEventListener('touchend', e => {
