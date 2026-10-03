@@ -59,7 +59,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}
 /* celular deitado: o iPhone não deixa travar a rotação, então o app pede para voltar à vertical */
 #girar{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--ink);flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
 #girar svg{width:56px;height:56px;color:var(--ocre)}
-@media (orientation:landscape) and (max-height:540px){#girar{display:flex}}
+html.deitado #girar{display:flex}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
@@ -255,6 +255,12 @@ body.kb-aberto .pg-rodape{padding-bottom:10px}
 .pg-rodape .btn{white-space:nowrap;padding-left:10px;padding-right:10px;font-size:.92rem}
 .pg-icone{width:56px;height:56px;border-radius:16px;background:var(--inset);display:flex;align-items:center;justify-content:center;color:var(--ocre)}
 .pg-icone svg{width:28px;height:28px}
+/* ---------- V6.4: camada única de teclado ---------- */
+body.kb-aberto #nav{display:none}
+/* login e cadastro: o botão principal acompanha o teclado do celular */
+body.kb-nativo form.login .btn.primary[type="submit"],body.kb-aberto .onb #oNext{position:fixed;left:16px;right:16px;width:auto;max-width:608px;margin:0 auto;bottom:calc(var(--kb) + 10px);z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+body.kb-aberto .toast{bottom:calc(var(--kb) + 12px)}
+select[data-chips]{display:none!important}
 /* ---------- V6.3: cards deslizantes ---------- */
 .carr{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;border-radius:var(--r)}
 .carr::-webkit-scrollbar{display:none}
@@ -291,8 +297,14 @@ input.money.kp.ativo{box-shadow:none;border-bottom-width:3px}
 #teclado{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--bg);border-top:1px solid var(--line);padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none}
 @media (prefers-reduced-motion:no-preference){#teclado{animation:tecSobe .16s ease-out}@keyframes tecSobe{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}}
 #teclado .barra{display:flex;justify-content:space-between;align-items:center;padding:0 6px;min-height:36px}
-#teclado .barra span{font-size:.82rem;color:var(--muted)}
-#teclado .barra button{border:0;background:transparent;color:var(--action);font:inherit;font-weight:700;font-size:.92rem;min-height:36px;padding:0 6px;cursor:pointer}
+#teclado .barra span#tecDica{font-size:.82rem;color:var(--muted);flex:1;min-width:0;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tecDica.erro{color:var(--bad)!important;animation:tecErro .3s}
+@keyframes tecErro{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#teclado .nav-campos{display:flex;flex:none}
+#teclado .nav-campos button{width:40px;padding:0;display:grid;place-items:center}
+#teclado .nav-campos button:disabled{opacity:.3;cursor:default}
+#teclado .nav-campos svg{width:20px;height:20px}
+#teclado .barra button{flex:none;border:0;background:transparent;color:var(--action);font:inherit;font-weight:700;font-size:.92rem;min-height:36px;padding:0 6px;cursor:pointer}
 #teclado .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #teclado .grade button{min-height:52px;border:0;border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;touch-action:manipulation}
 #teclado .grade button.sec{background:var(--inset);border:1px solid var(--line);font-size:1.1rem}
@@ -757,7 +769,7 @@ function viewConfig() {
     const d = ONB.dia || 0, fixos = [5, 10, 15, 20, 24, 30];
     corpo = '<div><h1>Em que dia o salário costuma cair?</h1><p class="lead" style="margin-top:10px">Se cai em dia útil, escolha o dia mais comum.</p></div>' +
       '<div class="daygrid">' + fixos.map(k => '<button type="button" class="chip" data-d="' + k + '" aria-pressed="' + (k === d) + '">' + k + '</button>').join('') + '</div>' +
-      '<label class="f">Outro dia (1 a 28)<input type="text" id="oDo" inputmode="numeric" maxlength="2" value="' + (d && !fixos.includes(d) ? d : '') + '"></label>' +
+      '<label class="f">Outro dia (1 a 28)<input type="text" id="oDo" inputmode="numeric" data-max="28" data-dica="Dia de 1 a 28" maxlength="2" value="' + (d && !fixos.includes(d) ? d : '') + '"></label>' +
       '<div class="info" id="oCiclo"></div>';
   }
   if (n === 3) corpo = '<div><h1>Quanto você tem disponível hoje?</h1><p class="lead" style="margin-top:10px">É o ponto de partida. A partir daqui, o app acompanha cada gasto.</p></div>' +
@@ -1223,6 +1235,8 @@ function impactoMes(val) {
 }
 function sheetGasto(g, modo) {
   const edit = !!g, simular = modo === 'simular'; g = g || {valor: '', cat: '', desc: '', data: isoDate(today())};
+  const hojeISO = isoDate(today()), ontemD = today(); ontemD.setDate(ontemD.getDate() - 1); const ontemISO = isoDate(ontemD);
+  const dSel = g.data === hojeISO ? 'h' : g.data === ontemISO ? 'o' : 'x';
   delete CAR.gasto;
   const c = hojeC();
   const opts = Array.from({length: 4}, (_, k) => ymAdd(c, k)).map(k => '<option value="' + k + '"' + (k === ymAdd(c, 1) ? ' selected' : '') + '>' + cLabel(k) + (k === c ? ' (atual)' : '') + '</option>').join('');
@@ -1234,18 +1248,25 @@ function sheetGasto(g, modo) {
     '<div id="gParc" hidden style="display:flex;flex-direction:column;gap:12px">' +
       '<p class="small muted" id="gParcInfo">Digite o valor <b>total</b> da compra. As parcelas entram nos compromissos, não nos gastos de hoje.</p>' +
       '<div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Parcelas<div class="chips" id="gN">' + NPARC.map(k => '<button type="button" class="chip" data-n="' + k + '" aria-pressed="' + (k === 3) + '">' + k + 'x</button>').join('') + '</div></div>' +
-      '<label class="f">Primeira parcela paga em<select id="gS">' + opts + '</select></label>' +
+      '<label class="f">Primeira parcela paga em<select id="gS" data-chips="1">' + opts + '</select></label>' +
       '<div id="gOut" style="display:flex;flex-direction:column;gap:12px"></div>' +
     '</div>' +
     (edit ? '' : (() => { const fs = favoritos(); return fs.length ? '<div class="f" id="gFavW" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Seus frequentes<div class="chips" id="gFav">' + fs.map((f, i) => '<button type="button" class="chip" data-fav="' + i + '">' + esc(f.desc || f.cat) + ' · ' + brl(f.valor) + '</button>').join('') + '</div></div>' : ''; })()) +
     '<div class="chips" id="gC">' + CATS.map(k => '<button class="chip" type="button" aria-pressed="' + (g.cat === k) + '">' + k + '</button>').join('') + '</div>' +
     '<label class="f"><span id="gDl">Descrição (opcional)</span><input type="text" id="gD" value="' + esc(g.desc) + '" maxlength="60" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"></label>' +
-    '<label class="f" id="gTl">Data<input type="date" id="gT" value="' + g.data + '"></label>' +
+    '<div class="f" id="gTl" style="display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)">Data<div class="chips" id="gTc" role="group" aria-label="Data do gasto">' +
+      [['h', 'Hoje'], ['o', 'Ontem'], ['x', 'Outra data']].map(([k, t]) => '<button type="button" class="chip" data-d="' + k + '" aria-pressed="' + (k === dSel) + '">' + t + '</button>').join('') +
+      '</div><input type="date" id="gT" value="' + g.data + '" aria-label="Escolher a data"' + (dSel === 'x' ? '' : ' hidden') + '></div>' +
     (simular
       ? '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gLater" style="flex:1">Deixar para depois</button><button class="btn" id="gOk" style="flex:1">Lançar gasto</button></div>'
       : '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="gOk" style="flex:1">' + (edit ? 'Salvar gasto' : 'Lançar gasto') + '</button>' + (edit ? '<button class="btn danger" id="gDel">Apagar</button>' : '<button class="btn ghost" data-close>Cancelar</button>') + '</div>'),
     el => {
       let cat = g.cat || '', forma = 'vista', n = 3, start = ymAdd(c, 1);
+      el.querySelectorAll('#gTc .chip').forEach(b => b.onclick = () => {
+        const t = el.querySelector('#gT'); el.querySelectorAll('#gTc .chip').forEach(x => x.setAttribute('aria-pressed', x === b));
+        if (b.dataset.d === 'x') { t.hidden = false; try { if (t.showPicker) t.showPicker(); else t.focus(); } catch (er) { t.focus(); } }
+        else { t.hidden = true; t.value = b.dataset.d === 'h' ? hojeISO : ontemISO; }
+      });
       const v = el.querySelector('#gV'); setTimeout(() => v.focus(), 60);
       const parc = el.querySelector('#gParc'), out = el.querySelector('#gOut'), ok = el.querySelector('#gOk'), imp = el.querySelector('#gImp');
       const atualizar = () => {
@@ -1292,8 +1313,8 @@ function sheetItem(id, c) {
   const v = valorEm(it, c);
   sheet('<h2>' + esc(it.nome) + '</h2><p class="small muted">' + esc(it.custo || '') + '</p>' +
     '<label class="f">Valor em ' + cLabel(c) + '<input type="text" id="iV" inputmode="decimal" value="' + (v != null ? String(v).replace('.', ',') : '') + '"></label>' +
-    '<label class="f">Dia de vencimento (vazio se não souber)<input type="text" id="iD" inputmode="numeric" value="' + (it.dia || '') + '"></label>' +
-    (it.divida !== false ? '<label class="f">Juros ao mês, em % (vazio se não tiver)<input type="text" id="iJ" inputmode="decimal" data-nativo="1" value="' + (jurosDe(it) != null ? String(jurosDe(it)).replace('.', ',') : '') + '"></label>' : '') +
+    '<label class="f">Dia de vencimento (vazio se não souber)<input type="text" id="iD" inputmode="numeric" data-max="31" data-dica="Dia de 1 a 31" value="' + (it.dia || '') + '"></label>' +
+    (it.divida !== false ? '<label class="f">Juros ao mês, em % (vazio se não tiver)<input type="text" id="iJ" inputmode="decimal" data-pct="1" value="' + (jurosDe(it) != null ? String(jurosDe(it)).replace('.', ',') : '') + '"></label>' : '') +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="iOk" style="flex:1">Salvar</button><button class="btn danger" id="iDel">Excluir</button></div>',
     el => {
       el.querySelector('#iOk').onclick = () => {
@@ -1318,10 +1339,10 @@ function sheetNovoItem(tipoIni) {
   sheet((S.novato ? '<p class="info"><b style="color:var(--ocre)">Dica:</b> comece pelas contas que se repetem todo mês, como internet, celular e academia.</p>' : '') +
     '<div class="chips" id="nT" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" class="chip" data-t="fixa" aria-pressed="' + (tipo === 'fixa') + '">Conta fixa</button><button type="button" class="chip" data-t="parc" aria-pressed="' + (tipo === 'parc') + '">Parcelada</button></div>' +
     '<label class="f">Nome<input type="text" id="nN" maxlength="40" placeholder="Ex.: Internet" autocomplete="off" autocapitalize="sentences" enterkeyhint="next"></label>' +
-    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f" id="nVl">Valor por mês<input type="text" id="nV" inputmode="decimal" placeholder="R$ 0,00"></label><label class="f">Vence no dia<input type="text" id="nD" inputmode="numeric" placeholder="Ex.: 15"></label></div>' +
-    '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" data-nativo="1" placeholder="Opcional"></label></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f" id="nVl">Valor por mês<input type="text" id="nV" inputmode="decimal" placeholder="R$ 0,00"></label><label class="f">Vence no dia<input type="text" id="nD" inputmode="numeric" data-max="31" data-dica="Dia de 1 a 31" placeholder="Ex.: 15"></label></div>' +
+    '<div id="nParc" style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label class="f">Parcelas que faltam<input type="text" id="nP" inputmode="numeric" data-max="420" data-dica="Quantas parcelas ainda faltam" placeholder="Ex.: 10"></label><label class="f">Juros ao mês (%)<input type="text" id="nJ" inputmode="decimal" data-pct="1" placeholder="Opcional"></label></div>' +
     '<p class="small muted">Vai parcelar uma compra nova? Use antes o "Posso gastar isso?".</p></div>' +
-    '<label class="f">Primeiro pagamento em<select id="nC">' + opts + '</select></label>' +
+    '<label class="f">Primeiro pagamento em<select id="nC" data-chips="1">' + opts + '</select></label>' +
     (S.novato ? '<p class="small muted">As contas deste ciclo já saíram do saldo que você informou, por isso o padrão é o próximo ciclo.</p>' : '') +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="nOk" style="flex:1">Adicionar</button></div>',
     el => {
@@ -1347,7 +1368,7 @@ function sheetEntrada(e) {
   sheet('<h2>' + (edit ? 'Editar valor' : 'Novo valor a receber') + '</h2>' +
     '<label class="f">De quem ou o quê<input type="text" id="eN" maxlength="40" value="' + esc(e.nome) + '"></label>' +
     '<label class="f">Valor<input type="text" id="eV" inputmode="decimal" value="' + (edit ? String(e.valor).replace('.', ',') : '') + '"></label>' +
-    '<label class="f">Ciclo previsto<select id="eC">' + opts + '</select></label>' +
+    '<label class="f">Ciclo previsto<select id="eC" data-chips="1">' + opts + '</select></label>' +
     '<label class="f">Observação (opcional)<input type="text" id="eO" maxlength="80" value="' + esc(e.obs) + '"></label>' +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="eOk" style="flex:1">Salvar</button>' + (edit ? '<button class="btn danger" id="eDel">Excluir</button>' : '<button class="btn ghost" data-close>Cancelar</button>') + '</div>',
     el => {
@@ -1364,7 +1385,7 @@ function sheetEntrada(e) {
 }
 function sheetSalario() {
   sheet('<h2>Salário</h2><label class="f">Valor líquido<input type="text" id="sV2" inputmode="decimal" value="' + String(S.salario).replace('.', ',') + '"></label>' +
-    '<label class="f">Dia em que costuma cair<input type="text" id="sD2" inputmode="numeric" value="' + dia() + '"></label>' +
+    '<label class="f">Dia em que costuma cair<input type="text" id="sD2" inputmode="numeric" data-max="28" data-dica="Dia de 1 a 28" value="' + dia() + '"></label>' +
     '<div class="row" style="flex-wrap:nowrap"><button class="btn primary" id="sOk" style="flex:1">Salvar</button><button class="btn ghost" data-close>Cancelar</button></div>',
     el => el.querySelector('#sOk').onclick = () => {
       const v = parseMoney(el.querySelector('#sV2').value), d = parseInt(el.querySelector('#sD2').value, 10);
@@ -1466,7 +1487,7 @@ function sheetAjustes() {
 }
 
 /* ================= V6 ================= */
-const VERSAO_APP = '6.3';
+const VERSAO_APP = '6.4';
 // ---------- instalação (Android) e instruções (iPhone)
 const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1791,29 +1812,71 @@ function sheetZerar() {
     });
 }
 
-// ---------- camada 1: teclado do celular. Mede o espaço real e sobe a folha.
-let kbNativo = 0, kbProprio = 0;
+// ---------- camada de teclado (v6.4): uma única medida e uma única regra para o app inteiro.
+// Números usam o teclado do Prumo; textos usam o do celular. As telas só leem --vh, --vtop, --kb e --kbp.
+let kbNativo = 0, kbDist = 0, kbProprio = 0; // kbNativo: altura do teclado do celular · kbDist: quanto o fundo visível está acima do fundo da página
+const campoTexto = t => !!t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !(t.classList && t.classList.contains('kp')) && !/^(checkbox|radio|file|button|submit|hidden)$/.test(t.type || '');
 function aplicarKb() {
   const vv = window.visualViewport, alt = vv ? vv.height : window.innerHeight;
-  const kb = Math.max(kbNativo, kbProprio), st = document.documentElement.style;
-  // --vh já é a área visível (o iPhone encolhe com o teclado): não descontar o teclado do celular de novo
-  st.setProperty('--kb', kb + 'px'); st.setProperty('--kbp', kbProprio + 'px');
+  const kbp = kbNativo > 0 ? 0 : kbProprio; // com o teclado do celular aberto, o do Prumo não ocupa espaço
+  const kb = Math.max(kbNativo > 0 ? kbDist : 0, kbp), st = document.documentElement.style;
+  st.setProperty('--kb', kb + 'px'); st.setProperty('--kbp', kbp + 'px');
   st.setProperty('--vh', alt + 'px'); st.setProperty('--vtop', (vv ? Math.max(0, vv.offsetTop) : 0) + 'px');
-  document.body.classList.toggle('kb-aberto', kb > 0);
+  document.body.classList.toggle('kb-aberto', kb > 0 || kbNativo > 0);
+  document.body.classList.toggle('kb-nativo', kbNativo > 0);
+  checarGiro();
 }
+let medirT = null;
 function medirTeclado() {
   const vv = window.visualViewport; if (!vv) return;
-  const sobra = window.innerHeight - vv.height - vv.offsetTop;
-  kbNativo = sobra > 80 ? Math.round(sobra) : 0;
+  // teclado aberto = a área visível encolheu; o deslocamento (o iPhone "empurra" a página) é tratado à parte
+  const alt = window.innerHeight - vv.height;
+  kbNativo = alt > 80 ? Math.round(alt) : 0;
+  kbDist = kbNativo ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
   aplicarKb();
-  const a = document.activeElement;
-  if (kbNativo && a && a.closest && a.closest('.sheet')) setTimeout(() => a.scrollIntoView({block: a.closest('.pagina') ? 'nearest' : 'center', behavior: a.closest('.pagina') ? 'auto' : 'smooth'}), 60);
+  if (kbNativo && TEC.saindo) fecharTeclado();          // o do celular chegou: o do Prumo sai
+  if (!kbNativo && TEC.pend) mostrarTeclado();          // o do celular saiu: o do Prumo entra
+  clearTimeout(medirT); medirT = setTimeout(() => revelar(TEC.alvo || document.activeElement), 60);
 }
 if (window.visualViewport) { visualViewport.addEventListener('resize', medirTeclado); visualViewport.addEventListener('scroll', medirTeclado); }
+// Mostra o campo em uso (e o nome dele) dentro da área que rola, sem passar por baixo do topo, do botão ou do teclado.
+function revelar(el) {
+  if (!el || !el.isConnected || !el.closest) return;
+  if (!(campoTexto(el) || el.classList.contains('kp'))) return;
+  const sc = el.closest('.pg-corpo, #layer .sheet:not(.pagina), #rolagem'); if (!sc) return;
+  const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0;
+  const vBot = (vv ? vv.offsetTop + vv.height : window.innerHeight) - (kbNativo > 0 ? 0 : kbProprio);
+  const r = sc.getBoundingClientRect();
+  const topo = Math.max(r.top, vTop) + 8;
+  let fundo = Math.min(r.bottom, vBot) - 12;
+  const fixo = sc.matches('.sheet') ? sc.querySelector('.sheet-in > .row:last-child') : (document.body.classList.contains('kb-aberto') ? sc.querySelector('.onb #oNext') : null) || (kbNativo ? sc.querySelector('form.login .btn.primary[type="submit"]') : null);
+  if (fixo && !fixo.contains(el)) fundo = Math.min(fundo, fixo.getBoundingClientRect().top - 8);
+  const alvo = el.closest('label, .f') || el, a = alvo.getBoundingClientRect();
+  let t = a.top, b = a.bottom;
+  // se o botão principal vem logo depois do campo (ex.: Entrar), mantém ele visível também
+  const bloco = el.closest('form, .sheet-in, .onb');
+  const btn = bloco && Array.from(bloco.querySelectorAll('.btn.primary')).find(x => x !== fixo && !x.closest('.pg-rodape') && x.getBoundingClientRect().top >= b - 1);
+  if (btn) { const bb = btn.getBoundingClientRect(); if (bb.bottom - t <= fundo - topo) b = bb.bottom; }
+  let d = 0;
+  if (b > fundo) d = b - fundo;
+  if (t - d < topo) d = t - topo;
+  if (Math.abs(d) > 1) sc.scrollTop += d;
+}
+// Celular deitado: olha a orientação real do aparelho, não o tamanho da área visível (que encolhe com o teclado no Android)
+function checarGiro() {
+  let ang = null;
+  if (screen.orientation && typeof screen.orientation.angle === 'number') ang = screen.orientation.angle;
+  else if (typeof window.orientation === 'number') ang = window.orientation;
+  const deitado = ang !== null ? Math.abs(ang) % 180 === 90 : (window.innerWidth > window.innerHeight && kbNativo === 0);
+  document.documentElement.classList.toggle('deitado', deitado && Math.min(screen.width, screen.height) < 540);
+}
+window.addEventListener('orientationchange', () => setTimeout(checarGiro, 150));
+window.addEventListener('resize', checarGiro);
+try { screen.orientation && screen.orientation.addEventListener && screen.orientation.addEventListener('change', checarGiro); } catch (e) {}
 // tocar fora de um campo fecha o teclado do celular (o iPhone não faz isso sozinho)
 document.addEventListener('touchstart', e => {
   const a = document.activeElement, t = e.target;
-  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.classList.contains('kp') && !t.closest('input, textarea, select, label, button')) a.blur();
+  if (campoTexto(a) && !t.closest('input, textarea, select, label, button')) a.blur();
   // área vazia fecha o teclado próprio na hora; botões e links fecham depois do clique (para não mudar o layout no meio do toque)
   if (TEC.alvo && !t.closest('#teclado, input.kp, .sheet, button, a, label')) fecharTeclado();
 }, {passive: true, capture: true});
@@ -1822,67 +1885,157 @@ document.addEventListener('click', e => {
   if (!TEC.alvo || Date.now() - TEC.abertoEm < 450 || e.target === document.body || e.target === document.documentElement) return;
   if (!e.target.closest('#teclado, input.kp, .sheet')) setTimeout(fecharTeclado, 0);
 }, true);
-// ao entrar num campo de texto, o teclado próprio sai e o do celular entra
-document.addEventListener('focusin', e => { const t = e.target; if (TEC.alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !t.classList.contains('kp')) fecharTeclado(); });
+// entrar num campo de texto: o teclado do Prumo espera o do celular subir e então sai (sem a tela "pular")
+document.addEventListener('focusin', e => {
+  const t = e.target;
+  if (TEC.alvo && campoTexto(t)) {
+    TEC.alvo.classList.remove('ativo'); clearTimeout(TEC.pendT); TEC.pend = false;
+    TEC.saindo = true; clearTimeout(TEC.saindoT); TEC.saindoT = setTimeout(fecharTeclado, 450);
+  }
+  if (campoTexto(t) && t.tagName !== 'SELECT') { setTimeout(() => revelar(t), 90); setTimeout(() => revelar(t), 420); }
+});
+// ao fechar o teclado do celular, a página volta exatamente para o lugar (o iPhone às vezes a deixa deslocada)
+document.addEventListener('focusout', () => setTimeout(() => {
+  if (campoTexto(document.activeElement)) return;
+  const se = document.scrollingElement; if (se && se.scrollTop) se.scrollTop = 0;
+  if (window.scrollY) window.scrollTo(0, 0);
+}, 160));
+// Enter num campo de texto de uma folha leva ao próximo campo
+document.addEventListener('keydown', e => {
+  if (TEC.alvo || e.key !== 'Enter' || !campoTexto(e.target) || e.target.tagName !== 'INPUT' || !e.target.closest('#layer .sheet')) return;
+  e.preventDefault(); const l = camposDe(e.target), t = l[l.indexOf(e.target) + 1];
+  if (!t) e.target.blur(); else if (t.classList.contains('kp')) abrirTeclado(t); else t.focus();
+});
+function camposDe(i) {
+  const raiz = i.closest('#layer .sheet') || i.closest('.onb') || document.getElementById('view') || document.body;
+  return Array.from(raiz.querySelectorAll('input, textarea')).filter(x => !/^(hidden|checkbox|radio|file|button|submit|date)$/.test(x.type) && !x.disabled && x.offsetParent !== null && !x.closest('[hidden]'));
+}
+function irCampo(d) {
+  const i = TEC.alvo; if (!i) return;
+  const l = camposDe(i), t = l[l.indexOf(i) + d]; if (!t) return;
+  if (t.classList.contains('kp')) abrirTeclado(t); else t.focus();
+}
 
-// ---------- camada 2: teclado próprio para valores (entra pelos centavos)
-const TEC = {alvo: null, cent: 0, el: null, segurar: null, abertoEm: 0};
+// ---------- teclado do Prumo: valor (centavos automáticos), inteiro (dia, parcelas) e porcentagem (juros)
+const TEC = {alvo: null, tipo: 'valor', cent: 0, el: null, segurar: null, abertoEm: 0, pend: false, pendT: null, saindo: false, saindoT: null};
 const fmtCent = n => (n / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const ehValor = i => i && i.tagName === 'INPUT' && i.getAttribute('inputmode') === 'decimal' && !i.dataset.nativo;
+const TECLAS = {valor: ['1','2','3','4','5','6','7','8','9','00','0','del'], int: ['1','2','3','4','5','6','7','8','9','','0','del'], pct: ['1','2','3','4','5','6','7','8','9',',','0','del']};
+const SVG_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
+const SVG_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
+const SVG_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 function prepararCampos(raiz) {
-  (raiz.querySelectorAll ? raiz.querySelectorAll('input[inputmode="decimal"]:not([data-nativo]):not(.kp)') : []).forEach(i => {
-    i.classList.add('kp'); i.readOnly = true;
-    { const v = parseMoney(i.value); if (v > 0) i.value = 'R$ ' + fmtCent(Math.round(v * 100)); } i.setAttribute('inputmode', 'none'); i.dataset.kp = '1';
+  if (!raiz.querySelectorAll) return;
+  raiz.querySelectorAll('input[inputmode="decimal"]:not(.kp), input[inputmode="numeric"]:not(.kp)').forEach(i => {
+    const tipo = i.getAttribute('inputmode') === 'numeric' ? 'int' : i.dataset.pct ? 'pct' : 'valor';
+    i.classList.add('kp'); i.readOnly = true; i.dataset.kp = tipo; i.setAttribute('inputmode', 'none');
+    if (tipo === 'valor') { const v = parseMoney(i.value); if (v > 0) i.value = 'R$ ' + fmtCent(Math.round(v * 100)); }
     i.setAttribute('aria-describedby', 'tecDica');
     i.addEventListener('focus', () => abrirTeclado(i));
     i.addEventListener('click', () => abrirTeclado(i));
   });
+  // listas curtas (ciclos) viram botões: nada de roleta do sistema subindo por baixo
+  raiz.querySelectorAll('select[data-chips]:not([data-pronto])').forEach(sel => {
+    sel.dataset.pronto = '1';
+    const g = document.createElement('div'); g.className = 'chips'; g.setAttribute('role', 'group');
+    g.innerHTML = Array.from(sel.options).map(o => '<button type="button" class="chip" data-v="' + esc(o.value) + '">' + esc(o.text) + '</button>').join('');
+    const pinta = () => g.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === sel.value));
+    g.querySelectorAll('.chip').forEach(b => b.onclick = ev => { ev.preventDefault(); sel.value = b.dataset.v; pinta(); sel.dispatchEvent(new Event('change', {bubbles: true})); });
+    sel.after(g); pinta();
+  });
 }
 new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { prepararCampos(n); ligarCarrosseis(n); } }))).observe(document.body, {childList: true, subtree: true});
 function abrirTeclado(i) {
-  if (TEC.alvo === i && TEC.el) return;
-  if (TEC.alvo) TEC.alvo.classList.remove('ativo');
-  const a = document.activeElement; if (a && a !== i && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !a.classList.contains('kp')) a.blur();
-  TEC.alvo = i; TEC.abertoEm = Date.now(); i.classList.add('ativo');
-  const v = parseMoney(i.value); TEC.cent = v > 0 ? Math.round(v * 100) : 0;
+  if (TEC.alvo === i && (TEC.el || TEC.pend) && !TEC.saindo) return;
+  if (TEC.alvo && TEC.alvo !== i) TEC.alvo.classList.remove('ativo');
+  clearTimeout(TEC.saindoT); TEC.saindo = false;
+  const a = document.activeElement, vinhaDoCelular = campoTexto(a) && a !== i;
+  if (vinhaDoCelular) a.blur();
+  TEC.alvo = i; TEC.tipo = i.dataset.kp || 'valor'; TEC.abertoEm = Date.now(); i.classList.add('ativo');
+  // o teclado do celular ainda está descendo: espera ele sair antes de subir o do Prumo
+  if (vinhaDoCelular && kbNativo > 0) { TEC.pend = true; clearTimeout(TEC.pendT); TEC.pendT = setTimeout(mostrarTeclado, 380); return; }
+  mostrarTeclado();
+}
+function mostrarTeclado() {
+  clearTimeout(TEC.pendT); TEC.pend = false;
+  const i = TEC.alvo; if (!i || !i.isConnected) return;
   if (!TEC.el) {
-    const DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
-    const el = document.createElement('div'); el.id = 'teclado'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Teclado de valores');
-    el.innerHTML = '<div class="barra"><span id="tecDica">Os centavos entram sozinhos</span><button type="button" data-k="ok">Pronto</button></div><div class="grade">' +
-      ['1','2','3','4','5','6','7','8','9','00','0','del'].map(k => '<button type="button" data-k="' + k + '"' + (k === '00' || k === 'del' ? ' class="sec"' : '') + ' aria-label="' + (k === 'del' ? 'Apagar (segure para zerar)' : k) + '">' + (k === 'del' ? DEL : k) + '</button>').join('') + '</div>';
-    el.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); tecla(b.dataset.k);
-      if (b.dataset.k === 'del') { clearTimeout(TEC.segurar); TEC.segurar = setTimeout(() => { TEC.cent = 0; escrever(); vibrar(20); }, 550); } });
+    const el = document.createElement('div'); el.id = 'teclado'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Teclado do Prumo');
+    el.innerHTML = '<div class="barra"><span class="nav-campos"><button type="button" data-nav="-1" aria-label="Campo anterior">' + SVG_UP + '</button><button type="button" data-nav="1" aria-label="Próximo campo">' + SVG_DOWN + '</button></span>' +
+      '<span id="tecDica"></span><button type="button" data-k="ok">Pronto</button></div><div class="grade"></div>';
+    el.addEventListener('pointerdown', e => {
+      const b = e.target.closest('button'); if (!b) return; e.preventDefault();
+      if (!b.dataset.k) return;
+      tecla(b.dataset.k);
+      if (b.dataset.k === 'del') { clearTimeout(TEC.segurar); TEC.segurar = setTimeout(limparCampo, 550); }
+    });
+    el.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b && !b.disabled) irCampo(+b.dataset.nav); });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => el.addEventListener(t, () => clearTimeout(TEC.segurar)));
     document.body.appendChild(el); TEC.el = el;
   }
-  requestAnimationFrame(() => { kbProprio = TEC.el ? TEC.el.offsetHeight : 0; aplicarKb(); setTimeout(() => { if (i.closest('.sheet')) i.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }, 80); });
+  if (TEC.el.dataset.tipo !== TEC.tipo) {
+    TEC.el.dataset.tipo = TEC.tipo;
+    TEC.el.querySelector('.grade').innerHTML = TECLAS[TEC.tipo].map(k => k === '' ? '<span aria-hidden="true"></span>' :
+      '<button type="button" data-k="' + k + '"' + (/^(00|del|,)$/.test(k) ? ' class="sec"' : '') + ' aria-label="' + (k === 'del' ? 'Apagar (segure para limpar)' : k === ',' ? 'Vírgula' : k) + '">' + (k === 'del' ? SVG_DEL : k) + '</button>').join('');
+  }
+  const max = +i.dataset.max || 0;
+  const dica = TEC.el.querySelector('#tecDica'); dica.classList.remove('erro');
+  dica.textContent = i.dataset.dica || (TEC.tipo === 'valor' ? 'Os centavos entram sozinhos' : TEC.tipo === 'pct' ? 'Juros ao mês, em %' : max ? 'De 1 a ' + max : 'Somente números');
+  const l = camposDe(i), k = l.indexOf(i);
+  TEC.el.querySelector('[data-nav="-1"]').disabled = k <= 0;
+  TEC.el.querySelector('[data-nav="1"]').disabled = k < 0 || k >= l.length - 1;
+  requestAnimationFrame(() => { kbProprio = TEC.el ? TEC.el.offsetHeight : 0; aplicarKb(); setTimeout(() => revelar(i), 30); });
 }
 function fecharTeclado() {
-  clearTimeout(TEC.segurar);
+  clearTimeout(TEC.segurar); clearTimeout(TEC.pendT); clearTimeout(TEC.saindoT);
+  TEC.pend = false; TEC.saindo = false;
   if (TEC.alvo) TEC.alvo.classList.remove('ativo');
   TEC.alvo = null; if (TEC.el) { TEC.el.remove(); TEC.el = null; }
   kbProprio = 0; aplicarKb();
 }
 const vibrar = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+function avisarLimite() { vibrar(30); const d = document.getElementById('tecDica'); if (d) { d.classList.remove('erro'); void d.offsetWidth; d.classList.add('erro'); } }
+function avisarCampo(i) { i.dispatchEvent(new Event('input', {bubbles: true})); }
+function limparCampo() { const i = TEC.alvo; if (!i) return; TEC.cent = 0; i.value = ''; vibrar(20); avisarCampo(i); }
 function escrever() {
   const i = TEC.alvo; if (!i) return;
   i.value = TEC.cent ? 'R$ ' + fmtCent(TEC.cent) : '';
   i.setAttribute('aria-valuetext', 'R$ ' + fmtCent(TEC.cent));
-  i.dispatchEvent(new Event('input', {bubbles: true}));
+  avisarCampo(i);
 }
 function tecla(k) {
-  if (!TEC.alvo) return;
+  const i = TEC.alvo; if (!i) return;
   if (k === 'ok') { fecharTeclado(); return; }
-  { const v = parseMoney(TEC.alvo.value); TEC.cent = v > 0 ? Math.round(v * 100) : 0; } // valor pode ter mudado por um favorito
-  if (k === 'del') TEC.cent = Math.floor(TEC.cent / 10);
-  else { const nx = TEC.cent * (k === '00' ? 100 : 10) + (k === '00' ? 0 : +k); if (nx < 1e11) TEC.cent = nx; }
-  vibrar(8); escrever();
+  if (TEC.tipo === 'valor') {
+    { const v = parseMoney(i.value); TEC.cent = v > 0 ? Math.round(v * 100) : 0; } // valor pode ter mudado por um favorito
+    if (k === ',') return;
+    if (k === 'del') TEC.cent = Math.floor(TEC.cent / 10);
+    else { const nx = TEC.cent * (k === '00' ? 100 : 10) + (k === '00' ? 0 : +k); if (nx < 1e11) TEC.cent = nx; }
+    vibrar(8); escrever(); return;
+  }
+  if (TEC.tipo === 'int') {
+    let v = i.value.replace(/\D/g, ''); const max = +i.dataset.max || 9999;
+    if (k === 'del') v = v.slice(0, -1);
+    else if (/^\d$/.test(k)) { const n = (v + k).replace(/^0+/, ''); if (!n) return; if (+n > max) { avisarLimite(); return; } v = n; }
+    else return;
+    i.value = v; vibrar(8); avisarCampo(i); return;
+  }
+  // porcentagem: até 99,99 com duas casas
+  let v = i.value.replace(/[^\d,]/g, '');
+  if (k === 'del') v = v.slice(0, -1);
+  else if (k === ',' || k === '.') { if (v.includes(',')) return; v = (v || '0') + ','; }
+  else if (/^\d$/.test(k)) {
+    const dec = v.split(',')[1]; if (dec !== undefined && dec.length >= 2) { avisarLimite(); return; }
+    const n = v === '0' ? k : v + k; if (parseFloat(n.replace(',', '.')) > 99.99) { avisarLimite(); return; } v = n;
+  } else return;
+  i.value = v; vibrar(8); avisarCampo(i);
 }
-// teclado físico (computador) também funciona com o teclado próprio aberto
+// teclado físico (computador) também funciona com o teclado do Prumo aberto
 document.addEventListener('keydown', e => {
-  if (!TEC.alvo) return;
+  if (!TEC.alvo || TEC.saindo || e.defaultPrevented) return;
   if (/^[0-9]$/.test(e.key)) { tecla(e.key); e.preventDefault(); }
+  else if ((e.key === ',' || e.key === '.') && TEC.tipo === 'pct') { tecla(','); e.preventDefault(); }
   else if (e.key === 'Backspace') { tecla('del'); e.preventDefault(); }
+  else if (e.key === 'Tab') { irCampo(e.shiftKey ? -1 : 1); e.preventDefault(); }
   else if (e.key === 'Enter' || e.key === 'Escape') { fecharTeclado(); e.preventDefault(); }
 });
 
